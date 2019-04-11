@@ -1,0 +1,7 @@
+[package]
+name = "ownership_exercise_solved"
+version = "0.1.0"
+authors = ["Gabri312 <gabriel.cmiel@htwg-konstanz.de>"]
+edition = "2018"
+
+[dependencies]
