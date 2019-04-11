@@ -1,14 +1,14 @@
 fn main() {
     let (adjective, name) = two_words();
-    let name = format!("{} {}", adjective, name);
-    print_out(name);
+    //let name = format!("{} {}", adjective, name);
+   // print_out(name);
 }
 
 fn two_words() -> (String, String) {
     (format!("fellow"), format!("Rustaceans"))
 }
 
-fn remove_vowels(name: String) -> String {
+/*fn remove_vowels(name: String) -> String {
     // Goal #1: What is needed here to make this compile?
     let output = String::new();
     for c in name.chars() {
@@ -37,4 +37,4 @@ fn print_out(name: String) {
 
     // Extra credit: Can you do it without copying any data?
     // (Using only ownership transfer)
-}
+}*/
