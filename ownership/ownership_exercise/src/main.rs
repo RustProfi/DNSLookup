@@ -1,21 +1,16 @@
 // Source: http://intorust.com/tutorial/ownership/
-/*
-Lines are uncommented so it can bee compiled
-remove comments on  10,11 17, 47 to start the exercise
-proceed with the Goals
-*/
 
 fn main() {
     let (adjective, name) = two_words();
-    //let name = format!("{} {}", adjective, name);
-    //print_out(name);
+    let name = format!("{} {}", adjective, name);
+    print_out(name);
 }
 
 fn two_words() -> (String, String) {
     (format!("fellow"), format!("Rustaceans"))
 }
 
-/*
+
 fn remove_vowels(name: String) -> String {
     // Goal #1: What is needed here to make this compile?
     let output = String::new();
@@ -45,4 +40,4 @@ fn print_out(name: String) {
 
     // Extra credit: Can you do it without copying any data?
     // (Using only ownership transfer)
-}*/
+}
