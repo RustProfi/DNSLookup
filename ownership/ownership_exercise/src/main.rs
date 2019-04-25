@@ -1,3 +1,5 @@
+// Source: http://intorust.com/tutorial/ownership/
+
 fn main() {
     let (adjective, name) = two_words();
     let name = format!("{} {}", adjective, name);
@@ -7,6 +9,7 @@ fn main() {
 fn two_words() -> (String, String) {
     (format!("fellow"), format!("Rustaceans"))
 }
+
 
 fn remove_vowels(name: String) -> String {
     // Goal #1: What is needed here to make this compile?
