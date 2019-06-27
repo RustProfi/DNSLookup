@@ -1,17 +1,45 @@
+#[macro_use]
+extern crate derive_more;
 use std::env;
 use std::net::{ToSocketAddrs, SocketAddr, UdpSocket};
 use std::vec::IntoIter;
 use std::io::Error;
+use std::str::Utf8Error;
 use std::str;
 use std::num::ParseIntError;
 use std::fmt::Write;
 use std::num;
+use std::fmt;
+
+#[derive(From)]
+enum MyAppError {
+    MyIoError(std::io::Error),
+    MyUtf8Error(std::str::Utf8Error)
+}
+
+impl fmt::Display for MyAppError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        match *self {
+            MyAppError::MyIoError(ref x) => write!(f, "{}", x),
+            MyAppError::MyUtf8Error(ref x) => write!(f, "{}", x)
+        }
+    }
+}
 
 struct Header {
     /// Header for our query
     id: u16,
     qr: bool,
     opcode: bool,
+}
+
+enum Ip {
+    IpV4(String), IpV6(String)
+}
+
+struct Response {
+    name: String,
+    ip: Ip
 }
 
 impl Header {
@@ -32,7 +60,11 @@ fn main() {
             let mut buf = [0u8;4096];
             sock.send_to(&message[..],"141.37.11.1:53");
             let (amt, src) = sock.recv_from(&mut buf).unwrap();
-            println!("{:?}", Vec::from(&buf[0..amt]));
+            //println!("{:x?}", Vec::from(&buf[0..amt]));
+            match parse_response(&buf[0..amt]) {
+                Ok(xD) => println!("{:?}", xD),
+                Err(lol) => println!("{:#?}", lol.to_string())
+            }
         }
     } else {
         println!("Usage is: nslookup [Host Name] | [Host IP] | -help");
@@ -40,6 +72,13 @@ fn main() {
         println!("nslookup 123.123.123.123 (Returns Host Name for Address)");
         println!("nslookup -help (Returns this Help Message)");
     }
+}
+
+fn parse_response(buf: &[u8])-> Result<String, MyAppError> {
+    let asHex = encode(buf);
+    let vec = asHex.as_bytes().chunks(2).map(str::from_utf8).collect::<Result<Vec<&str>, _>>()?;
+    println!("{:?}", vec);
+    Ok(asHex)
 }
 
 /// Returns a u8 vector on success else an Error
