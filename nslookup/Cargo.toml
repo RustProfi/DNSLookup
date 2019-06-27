@@ -5,3 +5,4 @@ authors = ["RustProfi <janetzkymarno@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+dns-parser = "0.8.0"
