@@ -27,6 +27,12 @@ struct Response {
     ip: Ip
 }
 
+impl Response {
+    fn new(name: String, ip: Ip) -> Self {
+        Response{name: name, ip: ip}
+    }
+}
+
 impl Header {
     fn new(id: u16, qr: bool, opcode: bool) -> String {
         let bin = format!("{}000{}00100000000", qr, opcode);
@@ -47,7 +53,7 @@ fn main() {
             let (amt, src) = sock.recv_from(&mut buf).unwrap();
             //println!("{:x?}", Vec::from(&buf[0..amt]));
             match parse_response(&buf[0..amt]) {
-                Ok(xD) => println!("{:?}", xD),
+                Ok(xD) => println!("Passt"),
                 Err(lol) => println!("{:#?}", lol.to_string())
             }
         }
@@ -59,11 +65,50 @@ fn main() {
     }
 }
 
-fn parse_response(buf: &[u8])-> Result<String, CustomError> {
+fn parse_response(buf: &[u8])-> Result<Response, CustomError> {
     let asHex = encode(buf);
-    let vec = asHex.as_bytes().chunks(2).map(str::from_utf8).collect::<Result<Vec<&str>, _>>()?;
-    println!("{:?}", vec);
-    Ok(asHex)
+    let response_vec = asHex.as_bytes().chunks(2).map(str::from_utf8).collect::<Result<Vec<&str>, _>>()?;
+    println!("{:?}", response_vec);
+    //println!("{}",format!("{}{}", vec[2], vec[3]));
+    check_response_status(&hex_to_binary(format!("{}{}", response_vec[2], response_vec[3])))?;
+    Ok(Response::new(String::from("amk"), Ip::IpV4(String::from("xD"))))
+}
+
+fn check_response_status(bytes: &[u8]) -> Result<(), CustomError> {
+    //println!("{:?}", bytes);
+    //bytes[0] ist response,
+    if bytes.len() < 16 || bytes[0] == 0 || bytes[12] == 1 || bytes[13] == 1 || bytes[14] == 1 || bytes[15] == 1 {
+        Err(CustomError::ResponseError)
+    }
+    else {
+        Ok(())
+    }
+}
+
+fn hex_to_binary(hex: String) -> Vec<u8> {
+    let mut result = vec![];
+    for i in hex.chars() {
+        match i {
+            '0' => {result.push(0); result.push(0); result.push(0); result.push(0)},
+            '1' => {result.push(0); result.push(0); result.push(0); result.push(1)},
+            '2' => {result.push(0); result.push(0); result.push(1); result.push(0)},
+            '3' => {result.push(0); result.push(0); result.push(1); result.push(1)},
+            '4' => {result.push(0); result.push(1); result.push(0); result.push(0)},
+            '5' => {result.push(0); result.push(1); result.push(0); result.push(1)},
+            '6' => {result.push(0); result.push(1); result.push(1); result.push(0)},
+            '7' => {result.push(0); result.push(1); result.push(1); result.push(1)},
+            '8' => {result.push(1); result.push(0); result.push(0); result.push(0)},
+            '9' => {result.push(1); result.push(0); result.push(0); result.push(1)},
+            'a' | 'A' => {result.push(1); result.push(0); result.push(1); result.push(0)},
+            'b' | 'B' => {result.push(1); result.push(0); result.push(1); result.push(1)},
+            'c' | 'C' => {result.push(1); result.push(1); result.push(0); result.push(0)},
+            'd' | 'D' => {result.push(1); result.push(1); result.push(0); result.push(1)},
+            'e' | 'E' => {result.push(1); result.push(1); result.push(1); result.push(0)},
+            'f' | 'F' => {result.push(1); result.push(1); result.push(1); result.push(1)},
+            _ => ()
+        }
+    }
+    result
 }
 
 /// Returns a u8 vector on success else an Error
