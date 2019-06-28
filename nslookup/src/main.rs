@@ -1,5 +1,3 @@
-#[macro_use]
-extern crate derive_more;
 use std::env;
 use std::net::{ToSocketAddrs, SocketAddr, UdpSocket};
 use std::vec::IntoIter;
@@ -9,22 +7,9 @@ use std::str;
 use std::num::ParseIntError;
 use std::fmt::Write;
 use std::num;
-use std::fmt;
 
-#[derive(From)]
-enum MyAppError {
-    MyIoError(std::io::Error),
-    MyUtf8Error(std::str::Utf8Error)
-}
-
-impl fmt::Display for MyAppError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        match *self {
-            MyAppError::MyIoError(ref x) => write!(f, "{}", x),
-            MyAppError::MyUtf8Error(ref x) => write!(f, "{}", x)
-        }
-    }
-}
+mod customerror;
+use customerror::CustomError;
 
 struct Header {
     /// Header for our query
@@ -74,7 +59,7 @@ fn main() {
     }
 }
 
-fn parse_response(buf: &[u8])-> Result<String, MyAppError> {
+fn parse_response(buf: &[u8])-> Result<String, CustomError> {
     let asHex = encode(buf);
     let vec = asHex.as_bytes().chunks(2).map(str::from_utf8).collect::<Result<Vec<&str>, _>>()?;
     println!("{:?}", vec);
