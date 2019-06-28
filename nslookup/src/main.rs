@@ -32,6 +32,7 @@ fn main() {
     println!("{}", s);
     println!("{:?}", decode(&s));
     let args: Vec<String> = env::args().collect();
+    let message = b"\xAA\xAA\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x07\x65\x78\x61\x6d\x70\x6c\x65\x03\x63\x6f\x6d\x00\x00\x01\x00\x01";
     if args.len() == 2 && &args[1] != "-help" {
         if check_ip(&args[1]) {
             println!("reverse lookup")
