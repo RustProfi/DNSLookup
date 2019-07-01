@@ -52,7 +52,7 @@ fn main() {
             sock.send_to(&message[..],"141.37.11.1:53");
             let (amt, src) = sock.recv_from(&mut buf).unwrap();
             println!("{:x?}", &buf[0..amt]);
-            match parse_response(&buf[0..amt]) {
+            match parse_response(&buf[0..amt], message[..].len()) {
                 Ok(xD) => println!("{}",xD.name),
                 Err(lol) => println!("{:#?}", lol.to_string())
             }
@@ -65,14 +65,19 @@ fn main() {
     }
 }
 
-fn parse_response(buf: &[u8])-> Result<Response, CustomError> {
+fn parse_response(buf: &[u8], response_start_index: usize)-> Result<Response, CustomError> {
     //Todo: Unwrap iwie raus xD
-    check_response_status(&to_binary_string(&buf[2..4])?.chars().map(|a| a.to_digit(10).unwrap() as u8).collect::<Vec<u8>>())?;
+    check_response_status(&to_binary_vec(&buf[2..4])?)?;
 
-    Ok(Response::new(getDomain(&buf)?, Ip::IpV4(String::from("xD"))))
+    let domain_name_index = get_name_index(((buf[response_start_index] as u16) << 8) | buf[response_start_index + 1] as u16);
+    Ok(Response::new(getDomain(&buf, domain_name_index)?, Ip::IpV4(String::from("xD"))))
 }
 
-fn to_binary_string(buf: &[u8]) -> Result<String, CustomError> {
+fn get_name_index(bytes: u16) -> usize {
+    (bytes << 2 >> 2) as usize
+}
+
+fn to_binary_vec(buf: &[u8]) -> Result<Vec<u8>, CustomError> {
     let bytes = encode(&buf);
     let mut s =  String::with_capacity(bytes.len() * 4);
 
@@ -97,21 +102,20 @@ fn to_binary_string(buf: &[u8]) -> Result<String, CustomError> {
             _ => return Err(CustomError::FaultyHexError),
         };
     }
-    Ok(s)
+    Ok(s.chars().map(|a| a.to_digit(10).unwrap() as u8).collect::<Vec<u8>>())
 }
 
 
 //Todo: index out of bounds abfangen
-fn getDomain(response: &[u8]) -> Result<String, CustomError> {
-    let answerstart = 12;
+fn getDomain(response: &[u8], answerstart: usize) -> Result<String, CustomError> {
     let length1 = response[answerstart] as usize;
     let startindex = answerstart + 1;
     let length2 = response[startindex + length1] as usize;
     let startindex2 = startindex + length1 + 1;
 
     let mut s = String::with_capacity(length1 + length2 + 1);
-    println!("{}", length2);
-    println!("{}", response[startindex+1] as char);
+    //println!("{}", length2);
+    //println!("{}", response[startindex+1] as char);
 
     for c in startindex..startindex+length1 {
         write!(&mut s, "{}", response[c] as char);
