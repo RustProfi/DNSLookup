@@ -3,6 +3,3 @@ name = "nslookup"
 version = "0.1.0"
 authors = ["RustProfi <janetzkymarno@gmail.com>"]
 edition = "2018"
-
-[dependencies]
-dns-parser = "0.8.0"

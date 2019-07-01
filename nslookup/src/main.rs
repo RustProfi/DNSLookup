@@ -4,8 +4,6 @@ use std::str;
 use std::num::ParseIntError;
 use std::fmt::Write;
 use std::vec::Vec;
-use std::slice;
-use std::path::Iter;
 
 struct Header {
     /// Header for our query
@@ -14,32 +12,59 @@ struct Header {
     opcode: bool,
 }
 
+struct Question {
+    /// Question that gets send
+    header: Vec<u8>,
+    url: String,
+    qtype: bool,
+}
+
+impl Question {
+    fn new(header: Vec<u8>, url: &str, qtype: bool) -> Vec<u8> {
+        let mut vec = Vec::new();
+        vec.extend(header);
+        if url.len() > 0 {
+            for x in url.split(".").collect::<Vec<&str>>() {
+                let url_bytes: Vec<_> = x.bytes().collect();
+                let len = url_bytes.len().to_be_bytes().to_vec();
+                let mut question: Vec<_> = len.into_iter().filter(|&i| i != 0).collect();
+                question.extend(url_bytes);
+                vec.extend(question)
+
+            }
+            let rest = vec![0,0,qtype as u8,0,1];
+            vec.extend(rest);
+            vec
+        } else {
+            let rest = vec![0,0,qtype as u8,0,1];
+            vec.extend(rest);
+            vec
+        }
+    }
+}
+
 impl Header {
-    fn new(id: u16, qr: bool, opcode: bool) -> String {
-        let bin = format!("{}000{}00100000000", qr, opcode);
-        binary_to_hex(bin);
-        format!("{:0>4x}",id, )
+    fn new(id: u16, qr: bool, opcode: bool) -> Vec<u8> {
+        let queryparams = format!("{}000{}00100000000", qr as i32, opcode as i32);
+        let m = format!("{:0>4x}{}0001000000000000",id, binary_to_hex(queryparams));
+        decode(&m).unwrap()
     }
 }
 
 fn main() {
     let sock = UdpSocket::bind("0.0.0.0:0").unwrap();
-    let message = b"\xAA\xAA\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x07\x65\x78\x61\x6d\x70\x6c\x65\x03\x63\x6f\x6d\x00\x00\x01\x00\x01";
-    let s = encode(message);
-    let bin = "1100100100000100".to_string();
-    binary_to_hex(bin);
-    //println!("{}", binary_to_u16(bin));
-    println!("{}", s);
-    println!("{:?}", decode(&s));
     let args: Vec<String> = env::args().collect();
-    let message = b"\xAA\xAA\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x07\x65\x78\x61\x6d\x70\x6c\x65\x03\x63\x6f\x6d\x00\x00\x01\x00\x01";
     if args.len() == 2 && &args[1] != "-help" {
         if check_ip(&args[1]) {
-            println!("reverse lookup")
-        } else {
+            let message = Question::new(Header::new(43691,false,true), "", true);
             let mut buf = [0u8;4096];
-            sock.send_to(&message[..],"141.37.11.1:53");
-            let amt = sock.recv(&mut buf).unwrap();
+            sock.send_to(&message[..],"1.1.1.1:53").unwrap();
+            sock.recv(&mut buf).unwrap();
+        } else {
+            let message = Question::new(Header::new(43690,false,false), &args[1], true);
+            let mut buf = [0u8;4096];
+            sock.send_to(&message[..],"8.8.8.8:53").unwrap();
+            sock.recv(&mut buf).unwrap();
         }
     } else {
         println!("Usage is: nslookup [Host Name] | [Host IP] | -help");
@@ -65,7 +90,7 @@ fn decode(hex: &str) -> Result<Vec<u8>,ParseIntError> {
 fn encode(bytes: &[u8]) -> String {
     let mut s = String::with_capacity(bytes.len() * 2);
     for &b in bytes {
-        write!(&mut s, "{:02x}", b);
+        write!(&mut s, "{:02x}", b).unwrap();
     }
     s
 }
@@ -81,15 +106,22 @@ fn check_ip(ip: &str) -> bool {
     }
 }
 
-fn binary_to_hex(binary: String) -> () {
+/// returns binary as hex representation
+/// # Arguments
+/// * `binary` 16 bit binary
+fn binary_to_hex(binary: String) -> String {
     let mut s = String::with_capacity(4);
     let i = binary.chars().collect::<Vec<char>>();
-    let mut slice = i.chunks_exact(4);
+    let slice = i.chunks_exact(4);
     for x in slice {
-        write!(&mut s, "{:x}", recursive_find(0, &x));
+        write!(&mut s, "{:x}", recursive_find(0, &x)).unwrap();
     }
-    println!("{}", s)
+    s
 }
+
+/// returns u16 representation of the given chunk so that it can be formatet and concatenated to a hex
+/// # Arguments
+/// * `number`
 fn recursive_find(mut number: u16, chars: &[char]) -> u16 {
     let mut chars_rec = chars.to_owned();
     let position = chars_rec.iter().position(|&x| x == '1');
