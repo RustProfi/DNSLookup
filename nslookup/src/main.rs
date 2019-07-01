@@ -51,9 +51,9 @@ fn main() {
             let mut buf = [0u8;4096];
             sock.send_to(&message[..],"141.37.11.1:53");
             let (amt, src) = sock.recv_from(&mut buf).unwrap();
-            //println!("{:x?}", Vec::from(&buf[0..amt]));
+            println!("{:x?}", &buf[0..amt]);
             match parse_response(&buf[0..amt]) {
-                Ok(xD) => println!("Passt"),
+                Ok(xD) => println!("{}",xD.name),
                 Err(lol) => println!("{:#?}", lol.to_string())
             }
         }
@@ -66,12 +66,63 @@ fn main() {
 }
 
 fn parse_response(buf: &[u8])-> Result<Response, CustomError> {
-    let asHex = encode(buf);
-    let response_vec = asHex.as_bytes().chunks(2).map(str::from_utf8).collect::<Result<Vec<&str>, _>>()?;
-    println!("{:?}", response_vec);
-    //println!("{}",format!("{}{}", vec[2], vec[3]));
-    check_response_status(&hex_to_binary(format!("{}{}", response_vec[2], response_vec[3])))?;
-    Ok(Response::new(String::from("amk"), Ip::IpV4(String::from("xD"))))
+    //Todo: Unwrap iwie raus xD
+    check_response_status(&to_binary_string(&buf[2..4])?.chars().map(|a| a.to_digit(10).unwrap() as u8).collect::<Vec<u8>>())?;
+
+    Ok(Response::new(getDomain(&buf)?, Ip::IpV4(String::from("xD"))))
+}
+
+fn to_binary_string(buf: &[u8]) -> Result<String, CustomError> {
+    let bytes = encode(&buf);
+    let mut s =  String::with_capacity(bytes.len() * 4);
+
+    for i in bytes.chars() {
+        match i {
+            '0' => write!(&mut s, "0000"),
+            '1' => write!(&mut s, "0001"),
+            '2' => write!(&mut s, "0010"),
+            '3' => write!(&mut s, "0011"),
+            '4' => write!(&mut s, "0100"),
+            '5' => write!(&mut s, "0101"),
+            '6' => write!(&mut s, "0110"),
+            '7' => write!(&mut s, "0111"),
+            '8' => write!(&mut s, "1000"),
+            '9' => write!(&mut s, "1001"),
+            'a' | 'A' => write!(&mut s, "1010"),
+            'b' | 'B' => write!(&mut s, "1011"),
+            'c' | 'C' => write!(&mut s, "1100"),
+            'd' | 'D' => write!(&mut s, "1101"),
+            'e' | 'E' => write!(&mut s, "1110"),
+            'f' | 'F' => write!(&mut s, "1111"),
+            _ => return Err(CustomError::FaultyHexError),
+        };
+    }
+    Ok(s)
+}
+
+
+//Todo: index out of bounds abfangen
+fn getDomain(response: &[u8]) -> Result<String, CustomError> {
+    let answerstart = 12;
+    let length1 = response[answerstart] as usize;
+    let startindex = answerstart + 1;
+    let length2 = response[startindex + length1] as usize;
+    let startindex2 = startindex + length1 + 1;
+
+    let mut s = String::with_capacity(length1 + length2 + 1);
+    println!("{}", length2);
+    println!("{}", response[startindex+1] as char);
+
+    for c in startindex..startindex+length1 {
+        write!(&mut s, "{}", response[c] as char);
+    }
+    write!(&mut s, "{}", '.');
+
+    for c in startindex2..startindex2+length2 {
+        write!(&mut s, "{}", response[c] as char);
+    }
+
+    Ok(s)
 }
 
 fn check_response_status(bytes: &[u8]) -> Result<(), CustomError> {
@@ -83,32 +134,6 @@ fn check_response_status(bytes: &[u8]) -> Result<(), CustomError> {
     else {
         Ok(())
     }
-}
-
-fn hex_to_binary(hex: String) -> Vec<u8> {
-    let mut result = vec![];
-    for i in hex.chars() {
-        match i {
-            '0' => {result.push(0); result.push(0); result.push(0); result.push(0)},
-            '1' => {result.push(0); result.push(0); result.push(0); result.push(1)},
-            '2' => {result.push(0); result.push(0); result.push(1); result.push(0)},
-            '3' => {result.push(0); result.push(0); result.push(1); result.push(1)},
-            '4' => {result.push(0); result.push(1); result.push(0); result.push(0)},
-            '5' => {result.push(0); result.push(1); result.push(0); result.push(1)},
-            '6' => {result.push(0); result.push(1); result.push(1); result.push(0)},
-            '7' => {result.push(0); result.push(1); result.push(1); result.push(1)},
-            '8' => {result.push(1); result.push(0); result.push(0); result.push(0)},
-            '9' => {result.push(1); result.push(0); result.push(0); result.push(1)},
-            'a' | 'A' => {result.push(1); result.push(0); result.push(1); result.push(0)},
-            'b' | 'B' => {result.push(1); result.push(0); result.push(1); result.push(1)},
-            'c' | 'C' => {result.push(1); result.push(1); result.push(0); result.push(0)},
-            'd' | 'D' => {result.push(1); result.push(1); result.push(0); result.push(1)},
-            'e' | 'E' => {result.push(1); result.push(1); result.push(1); result.push(0)},
-            'f' | 'F' => {result.push(1); result.push(1); result.push(1); result.push(1)},
-            _ => ()
-        }
-    }
-    result
 }
 
 /// Returns a u8 vector on success else an Error
