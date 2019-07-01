@@ -7,6 +7,7 @@ use std::str;
 use std::num::ParseIntError;
 use std::fmt::Write;
 use std::num;
+use std::fmt;
 
 mod customerror;
 use customerror::CustomError;
@@ -25,6 +26,15 @@ enum Ip {
 struct Response {
     name: String,
     ip: Ip
+}
+
+impl fmt::Display for Ip {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        match *self {
+            Ip::IpV4(ref ip) => write!(f, "{}", ip),
+            Ip::IpV6(ref ip) => write!(f, "{}", ip),
+        }
+    }
 }
 
 impl Response {
@@ -53,7 +63,7 @@ fn main() {
             let (amt, src) = sock.recv_from(&mut buf).unwrap();
             println!("{:x?}", &buf[0..amt]);
             match parse_response(&buf[0..amt], message[..].len()) {
-                Ok(xD) => println!("{}",xD.name),
+                Ok(xD) => println!("{} {}",xD.name, xD.ip),
                 Err(lol) => println!("{:#?}", lol.to_string())
             }
         }
@@ -70,7 +80,16 @@ fn parse_response(buf: &[u8], response_start_index: usize)-> Result<Response, Cu
     check_response_status(&to_binary_vec(&buf[2..4])?)?;
 
     let domain_name_index = get_name_index(((buf[response_start_index] as u16) << 8) | buf[response_start_index + 1] as u16);
-    Ok(Response::new(getDomain(&buf, domain_name_index)?, Ip::IpV4(String::from("xD"))))
+    Ok(Response::new(getDomain(&buf, domain_name_index)?, getIp(&buf, response_start_index, true)?))
+}
+
+//Todo: ipv6 noch überprüfen
+fn getIp(response: &[u8], response_start_index: usize, ipv4: bool) -> Result<Ip, CustomError> {
+    let length = (((response[response_start_index+10] as u16) << 8) | response[response_start_index + 11] as u16) as usize;
+    let ip_start_index = response_start_index + 12;
+
+    let ipv4 = (ip_start_index..ip_start_index+length).map(|a|format!("{}.", response[a])).collect::<String>().trim_end_matches(".").to_string();
+    Ok((Ip::IpV4(ipv4)))
 }
 
 fn get_name_index(bytes: u16) -> usize {
