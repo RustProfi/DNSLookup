@@ -19,13 +19,20 @@ use crate::question::{Header, Question};
 
 
 fn main() {
-    let sock = UdpSocket::bind("0.0.0.0:0").unwrap();
+    let sock = match UdpSocket::bind("0.0.0.0:0") {
+        Ok(s) => s,
+        Err(e) =>
+            {
+                println!("{}", e.to_string());
+                exit(1)
+            }
+    };
     let args: Vec<String> = env::args().collect();
     //let message = b"\xAA\xAA\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x07\x65\x78\x61\x6d\x70\x6c\x65\x03\x63\x6f\x6d\x00\x00\x01\x00\x01";
     if args.len() == 2 && &args[1] != "-help" {
         if check_ip(&args[1]) {
             let header = match Header::new(43691,false,true) {
-                Ok(x) => x,
+                Ok(s) => s,
                 Err(e) => {
                     println!("{}", e.to_string());
                     exit(1)
@@ -33,8 +40,19 @@ fn main() {
             };
             let message = Question::new(header, "", true);
             let mut buf = [0u8;4096];
-            sock.send_to(&message[..],"1.1.1.1:53").unwrap();
-            sock.recv(&mut buf).unwrap();
+            //TODO returns bytes written
+            match sock.send_to(&message[..],"1.1.1.1:53") {
+                Ok(_) => {},
+                Err(e) => {
+                    println!("{}", e.to_string());
+                }
+            }
+            match sock.recv(&mut buf)  {
+                Ok(_) => {},
+                Err(e) => {
+                    println!("{}", e.to_string());
+                }
+            }
         } else {
             let header = match Header::new(43690,false,false) {
                 Ok(x) => x,
@@ -45,8 +63,20 @@ fn main() {
             };
             let message = Question::new(header, &args[1], true);
             let mut buf = [0u8;4096];
-            sock.send_to(&message[..],"1.1.1.1:53").unwrap();
-            let amt = sock.recv(&mut buf).unwrap();
+            match sock.send_to(&message[..],"1.1.1.1:53") {
+                Ok(_) => {},
+                Err(e) => {
+                    println!("{}", e.to_string());
+                    exit(1)
+                }
+            }
+            let amt = match sock.recv(&mut buf) {
+                Ok(s) => s,
+                Err(e) => {
+                    println!("{}", e.to_string());
+                    exit(1)
+                }
+            };
             //println!("{:x?}", Vec::from(&buf[0..amt]));
             match parse_response(&buf[0..amt], message[..].len()) {
                 Ok(xD) => println!("{} {}",xD.name, xD.ip),

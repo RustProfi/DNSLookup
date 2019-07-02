@@ -1,6 +1,7 @@
 use std::fmt;
 
 pub enum CustomError {
+    BindError,
     Overflow,
     ParseIntError(std::num::ParseIntError),
     FmtError(std::fmt::Error),
@@ -19,6 +20,7 @@ impl fmt::Display for CustomError {
             CustomError::IoError(ref e) => write!(f, "{}", e),
             CustomError::Utf8Error(ref e) => write!(f, "{}", e),
             CustomError::Overflow => write!(f, "More than usize:Max nonmatching elements"),
+            CustomError::BindError => write!(f, "couldn't bind to address"),
             CustomError::ResponseError => write!(f, "Response ist fehlerbehaftet."),
             CustomError::FaultyHexError => write!(f, "Given value was not hex."),
             CustomError::Message(ref e) => write!(f, "{}", e),
@@ -34,6 +36,7 @@ impl fmt::Debug for CustomError {
             CustomError::IoError(ref e) => write!(f, "{}", e),
             CustomError::Utf8Error(ref e) => write!(f, "{}", e),
             CustomError::Overflow => write!(f, "More than usize:Max nonmatching elements"),
+            CustomError::BindError => write!(f, "couldn't bind to address"),
             CustomError::ResponseError => write!(f, "Response ist fehlerbehaftet."),
             CustomError::FaultyHexError => write!(f, "Given value was not hex."),
             CustomError::Message(ref e) => write!(f, "{}", e),
