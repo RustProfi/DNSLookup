@@ -10,6 +10,8 @@ use std::num;
 use std::fmt;
 use std::vec::Vec;
 use std::num::ParseIntError;
+use crate::response::parse_response;
+use std::process::exit;
 
 pub struct Header {
     /// Header for our query
@@ -120,4 +122,34 @@ fn decode(hex: &str) -> Result<Vec<u8>, ParseIntError> {
         .step_by(2)
         .map(|i| u8::from_str_radix(&hex[i..i + 2], 16))
         .collect()
+}
+
+pub fn sock_send(message: Vec<u8>) {
+    let sock = match UdpSocket::bind("0.0.0.0:0") {
+        Ok(s) => s,
+        Err(e) =>
+            {
+                println!("{}", e.to_string());
+                exit(1)
+            }
+    };
+    let mut buf = [0u8;4096];
+    match sock.send_to(&message[..],"1.1.1.1:53") {
+        Ok(_) => {},
+        Err(e) => {
+            println!("{}", e.to_string());
+            exit(1)
+        }
+    }
+    let amt = match sock.recv(&mut buf) {
+        Ok(s) => s,
+        Err(e) => {
+            println!("{}", e.to_string());
+            exit(1)
+        }
+    };
+    match parse_response(&buf[0..amt], message[..].len()) {
+        Ok(xD) => println!("{} {}",xD.name, xD.ip),
+        Err(lol) => println!("{:#?}", lol.to_string())
+    }
 }
