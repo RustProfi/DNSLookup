@@ -13,25 +13,25 @@ use crate::customerror::CustomError;
 
 pub struct Response {
     pub name: String,
-    pub ip: Ip
+    pub ip: Vec<String>
 }
 
-pub enum Ip {
-    IpV4(String), IpV6(String)
-}
+impl fmt::Display for Response {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        let mut res_str = String::new();
 
-impl Response {
-    fn new(name: String, ip: Ip) -> Self {
-        Response{name: name, ip: ip}
+        for xd in &self.ip[0..&self.ip.len()-1] {
+            res_str.push_str(&xd);
+            res_str.push_str("\n");
+        }
+        res_str.push_str(&self.ip[&self.ip.len() -1]);
+        write!(f, "Domain: {}\nIps:\n{}", self.name, res_str)
     }
 }
 
-impl fmt::Display for Ip {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        match *self {
-            Ip::IpV4(ref ip) => write!(f, "{}", ip),
-            Ip::IpV6(ref ip) => write!(f, "{}", ip),
-        }
+impl Response {
+    fn new(name: String, ip: Vec<String>) -> Self {
+        Response{name: name, ip: ip}
     }
 }
 
@@ -40,16 +40,26 @@ pub fn parse_response(buf: &[u8], response_start_index: usize)-> Result<Response
     check_response_status(&to_binary_vec(&buf[2..4])?)?;
 
     let domain_name_index = get_name_index(((buf[response_start_index] as u16) << 8) | buf[response_start_index + 1] as u16);
-    Ok(Response::new(getDomainR(&buf, domain_name_index), getIp(&buf, response_start_index, true)?))
+    Ok(Response::new(getDomainR(&buf, domain_name_index), getIpR(&buf, response_start_index, true)))
 }
 
 //Todo: ipv6 noch überprüfen
-fn getIp(response: &[u8], response_start_index: usize, ipv4: bool) -> Result<Ip, CustomError> {
+fn getIpR(response: &[u8], response_start_index: usize, ipv4: bool) -> Vec<String> {
+    let mut res = vec![];
     let length = (((response[response_start_index+10] as u16) << 8) | response[response_start_index + 11] as u16) as usize;
     let ip_start_index = response_start_index + 12;
 
-    let ipv4 = (ip_start_index..ip_start_index+length).map(|a|format!("{}.", response[a])).collect::<String>().trim_end_matches(".").to_string();
-    Ok((Ip::IpV4(ipv4)))
+    let ipv4xd = (ip_start_index..ip_start_index+length).map(|a|format!("{}.", response[a])).collect::<String>().trim_end_matches(".").to_string();
+    res.push( ipv4xd);
+    let next = ip_start_index+length;
+    if next >= response.len() {
+
+        res
+    }
+    else {
+        res.append( &mut getIpR(response, next, ipv4));
+        res
+    }
 }
 
 fn get_name_index(bytes: u16) -> usize {

@@ -47,9 +47,9 @@ fn main() {
             let mut buf = [0u8;4096];
             sock.send_to(&message[..],"1.1.1.1:53").unwrap();
             let amt = sock.recv(&mut buf).unwrap();
-            //println!("{:x?}", Vec::from(&buf[0..amt]));
+            println!("{:?}", Vec::from(&buf[0..amt]));
             match parse_response(&buf[0..amt], message[..].len()) {
-                Ok(xD) => println!("{} {}",xD.name, xD.ip),
+                Ok(xD) => println!("{}",xD.to_string()),
                 Err(lol) => println!("{:#?}", lol.to_string())
             }
         }
