@@ -25,8 +25,22 @@ pub struct Question {
     pub qtype: bool,
 }
 
+pub enum Qtype {
+    A,
+    AAAA
+}
+
+impl Qtype {
+    fn value(&self) -> u8 {
+        match *self {
+            Qtype::A => 1 as u8,
+            Qtype::AAAA => 28 as u8
+        }
+    }
+}
+
 impl Question {
-    pub fn new(header: Vec<u8>, url: &str, qtype: bool) -> Vec<u8> {
+    pub fn new(header: Vec<u8>, url: &str, qtype: Qtype) -> Vec<u8> {
         let mut vec = Vec::new();
         vec.extend(header);
         if url.len() > 0 {
@@ -38,11 +52,11 @@ impl Question {
                 vec.extend(question)
 
             }
-            let rest = vec![0,0,qtype as u8,0,1];
+            let rest = vec![0,0,qtype.value(),0,1];
             vec.extend(rest);
             vec
         } else {
-            let rest = vec![0,0,qtype as u8,0,1];
+            let rest = vec![0,0,qtype.value(),0,1];
             vec.extend(rest);
             vec
         }

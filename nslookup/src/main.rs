@@ -15,7 +15,7 @@ use response::parse_response;
 mod question;
 use customerror::CustomError;
 use std::process::exit;
-use crate::question::{Header, Question};
+use crate::question::{Header, Question, Qtype};
 
 
 fn main() {
@@ -38,7 +38,7 @@ fn main() {
                     exit(1)
                 }
             };
-            let message = Question::new(header, "", true);
+            let message = Question::new(header, "", Qtype::AAAA);
             let mut buf = [0u8;4096];
             //TODO returns bytes written
             match sock.send_to(&message[..],"1.1.1.1:53") {
@@ -61,7 +61,7 @@ fn main() {
                     exit(1)
                 }
             };
-            let message = Question::new(header, &args[1], true);
+            let message = Question::new(header, &args[1], Qtype::AAAA);
             let mut buf = [0u8;4096];
             match sock.send_to(&message[..],"1.1.1.1:53") {
                 Ok(_) => {},
