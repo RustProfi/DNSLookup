@@ -1,5 +1,4 @@
 use crate::customerror::CustomError;
-use crate::decode;
 use std::env;
 use std::net::{UdpSocket};
 use std::io::Error;
@@ -92,4 +91,14 @@ fn u16_from_position(position: usize) -> u16 {
         3 => 1,
         _ => 0,
     }
+}
+
+/// Returns a u8 vector on success else an Error
+/// # Arguments
+/// * `hex` - a hex &str that we want to parse
+fn decode(hex: &str) -> Result<Vec<u8>,ParseIntError> {
+    (0..hex.len())
+        .step_by(2)
+        .map(|i| u8::from_str_radix(&hex[i..i + 2], 16))
+        .collect()
 }

@@ -9,7 +9,6 @@ use std::num;
 use std::fmt;
 use std::vec::Vec;
 use crate::customerror::CustomError;
-use crate::encode;
 
 
 pub struct Response {
@@ -118,4 +117,15 @@ fn check_response_status(bytes: &[u8]) -> Result<(), CustomError> {
     else {
         Ok(())
     }
+}
+
+/// Returns hex of a u8
+/// # Arguments
+/// * `bytes` - bytes that we want to parse
+fn encode(bytes: &[u8]) -> String {
+    let mut s = String::with_capacity(bytes.len() * 2);
+    for &b in bytes {
+        write!(&mut s, "{:02x}", b).unwrap();
+    }
+    s
 }

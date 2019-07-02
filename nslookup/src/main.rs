@@ -61,31 +61,6 @@ fn main() {
     }
 }
 
-
-
-
-
-/// Returns a u8 vector on success else an Error
-/// # Arguments
-/// * `hex` - a hex &str that we want to parse
-fn decode(hex: &str) -> Result<Vec<u8>,ParseIntError> {
-    (0..hex.len())
-        .step_by(2)
-        .map(|i| u8::from_str_radix(&hex[i..i + 2], 16))
-        .collect()
-}
-
-/// Returns hex of a u8
-/// # Arguments
-/// * `bytes` - bytes that we want to parse
-fn encode(bytes: &[u8]) -> String {
-    let mut s = String::with_capacity(bytes.len() * 2);
-    for &b in bytes {
-        write!(&mut s, "{:02x}", b).unwrap();
-    }
-    s
-}
-
 /// Returns true if argument is an IP
 /// # Arguments
 /// * `bytes` - bytes that we want to parse
