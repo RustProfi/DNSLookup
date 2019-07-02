@@ -40,7 +40,7 @@ pub fn parse_response(buf: &[u8], response_start_index: usize)-> Result<Response
     check_response_status(&to_binary_vec(&buf[2..4])?)?;
 
     let domain_name_index = get_name_index(((buf[response_start_index] as u16) << 8) | buf[response_start_index + 1] as u16);
-    Ok(Response::new(getDomain(&buf, domain_name_index)?, getIp(&buf, response_start_index, true)?))
+    Ok(Response::new(getDomainR(&buf, domain_name_index), getIp(&buf, response_start_index, true)?))
 }
 
 //Todo: ipv6 noch überprüfen
@@ -84,28 +84,17 @@ fn to_binary_vec(buf: &[u8]) -> Result<Vec<u8>, CustomError> {
     Ok(s.chars().map(|a| a.to_digit(10).unwrap() as u8).collect::<Vec<u8>>())
 }
 
-
-//Todo: index out of bounds abfangen
-fn getDomain(response: &[u8], answerstart: usize) -> Result<String, CustomError> {
-    let length1 = response[answerstart] as usize;
-    let startindex = answerstart + 1;
-    let length2 = response[startindex + length1] as usize;
-    let startindex2 = startindex + length1 + 1;
-
-    let mut s = String::with_capacity(length1 + length2 + 1);
-    //println!("{}", length2);
-    //println!("{}", response[startindex+1] as char);
-
-    for c in startindex..startindex+length1 {
-        write!(&mut s, "{}", response[c] as char);
+fn getDomainR(response: &[u8], index: usize) -> String {
+    let length = response[index] as usize;
+    let startindex = index + 1;
+    let next = startindex+length;
+    let domain_part = (startindex..startindex+length).map(|a|response[a] as char).collect::<String>();
+    if response[next] == 0 {
+        domain_part
     }
-    write!(&mut s, "{}", '.');
-
-    for c in startindex2..startindex2+length2 {
-        write!(&mut s, "{}", response[c] as char);
+    else {
+        format!("{}.{}", domain_part, getDomainR(response,next))
     }
-
-    Ok(s)
 }
 
 fn check_response_status(bytes: &[u8]) -> Result<(), CustomError> {
