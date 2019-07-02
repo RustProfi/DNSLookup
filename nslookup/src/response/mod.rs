@@ -9,56 +9,95 @@ use std::num;
 use std::fmt;
 use std::vec::Vec;
 use crate::customerror::CustomError;
+use crate::qtype::Qtype;
 
 
 pub struct Response {
     pub name: String,
-    pub ip: Vec<String>
+    pub ip: Vec<Ip>
+}
+
+pub struct Ip {
+    pub ip: String,
+    pub qtype: Qtype,
+}
+
+impl Ip {
+    fn new(ip: String, qtype: Qtype) -> Self {
+        Ip{ip: ip, qtype: qtype}
+    }
 }
 
 impl fmt::Display for Response {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         let mut res_str = String::new();
 
-        for xd in &self.ip[0..&self.ip.len()-1] {
-            res_str.push_str(&xd);
+        for xd in &self.ip/*[0..&self.ip.len()-1]*/ {
+            res_str.push_str(&xd.qtype.to_string());
+            res_str.push_str(" ");
+            res_str.push_str(&xd.ip);
             res_str.push_str("\n");
         }
-        res_str.push_str(&self.ip[&self.ip.len() -1]);
+        //res_str.push_str(&self.ip[&self.ip.len() -1]);
         write!(f, "Domain: {}\nIps:\n{}", self.name, res_str)
     }
 }
 
 impl Response {
-    fn new(name: String, ip: Vec<String>) -> Self {
+    fn new(name: String, ip: Vec<Ip>) -> Self {
         Response{name: name, ip: ip}
     }
 }
 
 pub fn parse_response(buf: &[u8], response_start_index: usize)-> Result<Response, CustomError> {
     //Todo: Unwrap iwie raus xD
-    check_response_status(&to_binary_vec(&buf[2..4])?)?;
 
-    let domain_name_index = get_name_index(((buf[response_start_index] as u16) << 8) | buf[response_start_index + 1] as u16);
-    Ok(Response::new(getDomainR(&buf, domain_name_index), getIpR(&buf, response_start_index, true)))
+    check_response_status(&to_binary_vec(&buf[2..4])?)?;
+    let name = ((buf[response_start_index] as u16) << 8) | buf[response_start_index + 1] as u16;
+    let domain_name_index = get_name_index(name);
+
+    Ok(Response::new(getDomainR(&buf, domain_name_index), getIpR(&buf, response_start_index)?))
 }
 
+
+
 //Todo: ipv6 noch überprüfen
-fn getIpR(response: &[u8], response_start_index: usize, ipv4: bool) -> Vec<String> {
+fn getIpR(response: &[u8], response_start_index: usize) -> Result<Vec<Ip>, CustomError> {
+
     let mut res = vec![];
+
+    let qtype = Qtype::getQtype((((response[response_start_index+2] as u16) << 8) | response[response_start_index + 3] as u16) as usize)?;
     let length = (((response[response_start_index+10] as u16) << 8) | response[response_start_index + 11] as u16) as usize;
     let ip_start_index = response_start_index + 12;
 
-    let ipv4xd = (ip_start_index..ip_start_index+length).map(|a|format!("{}.", response[a])).collect::<String>().trim_end_matches(".").to_string();
-    res.push( ipv4xd);
+    match qtype {
+        Qtype::A => {
+            let ip = (ip_start_index..ip_start_index+length).map(|a|format!("{}.", response[a])).collect::<String>().trim_end_matches(".").to_string();
+            res.push( Ip::new(ip, qtype))
+        },
+        Qtype::AAAA => {
+            println!("len is {}", length);
+            //let ip = (ip_start_index..ip_start_index+length).map(|a|  response[a]).collect::<String>();//.chunks(4).map(|a|format!("{:?}:", a)).collect::<String>();
+            //Todo: Richtige Darstellung
+            let xD = encode(&response[ip_start_index..ip_start_index+length]);
+            res.push( Ip::new(xD, qtype))
+        },
+        Qtype::CNAME => {
+            println!("clen is {}", length);
+            let lol = (ip_start_index..ip_start_index+length).map(|a|{ response[a] as char}).collect::<String>();
+            let xD = encode(&response[ip_start_index..ip_start_index+length]);
+            res.push(Ip::new(xD, qtype))
+        }
+    }
+
+    ;
     let next = ip_start_index+length;
     if next >= response.len() {
-
-        res
+        Ok(res)
     }
     else {
-        res.append( &mut getIpR(response, next, ipv4));
-        res
+        res.append( &mut getIpR(response, next)?);
+        Ok(res)
     }
 }
 
