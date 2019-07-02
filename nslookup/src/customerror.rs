@@ -1,6 +1,7 @@
 use std::fmt;
 
 pub enum CustomError {
+    FmtError(std::fmt::Error),
     IoError(std::io::Error),
     Utf8Error(std::str::Utf8Error)
 }
@@ -8,6 +9,7 @@ pub enum CustomError {
 impl fmt::Display for CustomError {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match *self {
+            CustomError::FmtError(ref e) => write!(f, "{}", e),
             CustomError::IoError(ref e) => write!(f, "{}", e),
             CustomError::Utf8Error(ref e) => write!(f, "{}", e)
         }
@@ -17,6 +19,7 @@ impl fmt::Display for CustomError {
 impl fmt::Debug for CustomError {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match *self {
+            CustomError::FmtError(ref e) => write!(f, "{}", e),
             CustomError::IoError(ref e) => write!(f, "{}", e),
             CustomError::Utf8Error(ref e) => write!(f, "{}", e)
         }
@@ -32,5 +35,11 @@ impl From<std::io::Error> for CustomError {
 impl From<std::str::Utf8Error> for CustomError {
     fn from(error: std::str::Utf8Error) -> Self {
         CustomError::Utf8Error(error)
+    }
+}
+
+impl From<std::fmt::Error> for CustomError {
+    fn from(error: std::fmt::Error) -> Self {
+        CustomError::FmtError(error)
     }
 }

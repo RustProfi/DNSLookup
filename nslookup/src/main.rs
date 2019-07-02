@@ -9,6 +9,7 @@ use std::vec::Vec;
 
 mod customerror;
 use customerror::CustomError;
+use std::process::exit;
 
 struct Header {
     /// Header for our query
@@ -58,10 +59,10 @@ impl Question {
 }
 
 impl Header {
-    fn new(id: u16, qr: bool, opcode: bool) -> Vec<u8> {
+    fn new(id: u16, qr: bool, opcode: bool) -> Result<Vec<u8>,CustomError> {
         let queryparams = format!("{}000{}00100000000", qr as i32, opcode as i32);
-        let m = format!("{:0>4x}{}0001000000000000",id, binary_to_hex(queryparams));
-        decode(&m).unwrap()
+        let m = format!("{:0>4x}{}0001000000000000",id, binary_to_hex(queryparams)?);
+        Ok(decode(&m).unwrap())
     }
 }
 
@@ -70,12 +71,26 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() == 2 && &args[1] != "-help" {
         if check_ip(&args[1]) {
-            let message = Question::new(Header::new(43691,false,true), "", true);
+            let header = match Header::new(43691,false,true) {
+                Ok(x) => x,
+                Err(e) => {
+                    println!("{}", e.to_string());
+                    exit(1)
+                }
+            };
+            let message = Question::new(header, "", true);
             let mut buf = [0u8;4096];
             sock.send_to(&message[..],"1.1.1.1:53").unwrap();
             sock.recv(&mut buf).unwrap();
         } else {
-            let message = Question::new(Header::new(43690,false,false), &args[1], true);
+            let header = match Header::new(43690,false,false) {
+                Ok(x) => x,
+                Err(e) => {
+                    println!("{}", e.to_string());
+                    exit(1)
+                }
+            };
+            let message = Question::new(header, &args[1], true);
             let mut buf = [0u8;4096];
             sock.send_to(&message[..],"1.1.1.1:53").unwrap();
             let amt = sock.recv(&mut buf).unwrap();
@@ -135,14 +150,14 @@ fn check_ip(ip: &str) -> bool {
 /// returns binary as hex representation
 /// # Arguments
 /// * `binary` 16 bit binary
-fn binary_to_hex(binary: String) -> String {
+fn binary_to_hex(binary: String) -> Result<String, CustomError> {
     let mut s = String::with_capacity(4);
     let i = binary.chars().collect::<Vec<char>>();
     let slice = i.chunks_exact(4);
     for x in slice {
-        write!(&mut s, "{:x}", recursive_find(0, &x)).unwrap();
+        write!(&mut s, "{:x}", recursive_find(0, &x))?;
     }
-    s
+    Ok(s)
 }
 
 /// returns u16 representation of the given chunk so that it can be formatet and concatenated to a hex
