@@ -5,21 +5,28 @@ use std::fmt::Write;
 use std::vec::Vec;
 use std::num::ParseIntError;
 
+/// A DNS Header is represented here
 pub struct Header {
-    /// Header for our query
     pub id: u16,
     pub qr: bool,
     pub opcode: bool,
 }
 
+/// A DNS Header is represented here
 pub struct Question {
-    /// Question that gets send
     pub header: Vec<u8>,
     pub url: String,
-    pub qtype: bool,
+    pub qtype: Qtype,
 }
 
 impl Question {
+    /// Returns a u8 Vec made up of header and question
+    ///
+    /// # Arguments
+    ///
+    /// * `header` - u8 Vec of specified header
+    /// * `url` - url
+    /// * `qtype` - qtype (A or AAAA)
     pub fn new(header: Vec<u8>, url: &str, qtype: Qtype) -> Vec<u8> {
         let mut vec = Vec::new();
         vec.extend(header);
@@ -44,6 +51,13 @@ impl Question {
 }
 
 impl Header {
+    /// Returns the header as u8 Vector
+   ///
+   /// # Arguments
+   ///
+   /// * `id` - arbitrary 16 bit identifier
+   /// * `qr` - specify if query or response
+   /// * `opcode` - qtype (A or AAAA) query type (standard/inverse)
     pub fn new(id: u16, qr: bool, opcode: bool) -> Result<Vec<u8>,CustomError> {
         let queryparams = format!("{}000{}00100000000", qr as i32, opcode as i32);
         let m = format!("{:0>4x}{}0001000000000000",id, binary_to_hex(queryparams)?);
@@ -64,9 +78,10 @@ fn binary_to_hex(binary: String) -> Result<String, CustomError> {
     Ok(s)
 }
 
-/// returns u16 representation of the given chunk so that it can be formatet and concatenated to a hex
+/// returns u16 representation of the given chunk so that it can be formated and concatenated to a hex
 /// # Arguments
-/// * `number`
+/// * `number` - number
+/// * `chars` - chunk
 fn recursive_find(mut number: u16, chars: &[char]) -> Result<u16, CustomError> {
     let mut chars_rec = chars.to_owned();
     let position = chars_rec.iter().position(|&x| x == '1');
@@ -82,6 +97,9 @@ fn recursive_find(mut number: u16, chars: &[char]) -> Result<u16, CustomError> {
     Ok(number)
 }
 
+/// returns u16 representation of given position
+/// # Arguments
+/// * `usize` position of 1
 fn u16_from_position(position: usize) -> u16 {
     match position {
         0 => 8,
@@ -110,5 +128,16 @@ mod tests {
     #[test]
     fn test_u16_from_position() {
         assert_eq!(u16_from_position(0), 8);
+    }
+    #[test]
+    fn test_decode() {
+        let message = "AAAA01000001000000000000076578616d706c6503636f6d0000010001";
+        let message_decode = b"\xAA\xAA\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x07\x65\x78\x61\x6d\x70\x6c\x65\x03\x63\x6f\x6d\x00\x00\x01\x00\x01";
+        assert_eq!(decode(message).unwrap(), message_decode);
+    }
+    #[test]
+    fn test_binary_to_hex() {
+        let bin = "0000100100000000";
+        assert_eq!(binary_to_hex(bin.to_string()).unwrap(), "0900");
     }
 }

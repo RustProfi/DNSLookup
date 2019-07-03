@@ -51,6 +51,9 @@ fn check_ip(ip: &str) -> bool {
     }
 }
 
+/// prints Records of the receiving packet
+/// # Arguments
+/// * `message` - u8 vector, containing Header and Question
 pub fn sock_send(message: Vec<u8>) {
     let sock = match UdpSocket::bind("0.0.0.0:0") {
         Ok(s) => s,
