@@ -9,7 +9,7 @@ pub enum CustomError {
     Utf8Error(std::str::Utf8Error),
     ResponseError,
     FaultyHexError,
-    Message(String),
+    QtypeNotSupported,
 }
 
 impl fmt::Display for CustomError {
@@ -23,7 +23,7 @@ impl fmt::Display for CustomError {
             CustomError::BindError => write!(f, "couldn't bind to address"),
             CustomError::ResponseError => write!(f, "Response ist fehlerbehaftet."),
             CustomError::FaultyHexError => write!(f, "Given value was not hex."),
-            CustomError::Message(ref e) => write!(f, "{}", e),
+            CustomError::QtypeNotSupported => write!(f, "Qtype is not supported"),
         }
     }
 }
@@ -39,7 +39,7 @@ impl fmt::Debug for CustomError {
             CustomError::BindError => write!(f, "couldn't bind to address"),
             CustomError::ResponseError => write!(f, "Response ist fehlerbehaftet."),
             CustomError::FaultyHexError => write!(f, "Given value was not hex."),
-            CustomError::Message(ref e) => write!(f, "{}", e),
+            CustomError::QtypeNotSupported => write!(f, "Qtype is not supported."),
         }
     }
 }

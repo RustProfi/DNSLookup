@@ -1,4 +1,5 @@
 use crate::customerror::CustomError;
+use crate::qtype::Qtype;
 use std::env;
 use std::net::{UdpSocket};
 use std::io::Error;
@@ -25,20 +26,6 @@ pub struct Question {
     pub header: Vec<u8>,
     pub url: String,
     pub qtype: bool,
-}
-
-pub enum Qtype {
-    A,
-    AAAA
-}
-
-impl Qtype {
-    fn value(&self) -> u8 {
-        match *self {
-            Qtype::A => 1 as u8,
-            Qtype::AAAA => 28 as u8
-        }
-    }
 }
 
 impl Question {
@@ -149,7 +136,7 @@ pub fn sock_send(message: Vec<u8>) {
         }
     };
     match parse_response(&buf[0..amt], message[..].len()) {
-        Ok(xD) => println!("{} {}",xD.name, xD.ip),
+        Ok(xD) => println!("{}",xD.to_string()),
         Err(lol) => println!("{:#?}", lol.to_string())
     }
 }

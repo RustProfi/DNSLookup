@@ -9,47 +9,126 @@ use std::num;
 use std::fmt;
 use std::vec::Vec;
 use crate::customerror::CustomError;
+use crate::qtype::Qtype;
+use std::intrinsics::transmute;
 
 
 pub struct Response {
     pub name: String,
-    pub ip: Ip
+    pub ip: Vec<Ip>
 }
 
-pub enum Ip {
-    IpV4(String), IpV6(String)
+pub struct Ip {
+    pub ip: String,
+    pub qtype: Qtype,
 }
 
-impl Response {
-    fn new(name: String, ip: Ip) -> Self {
-        Response{name: name, ip: ip}
+impl Ip {
+    fn new(ip: String, qtype: Qtype) -> Self {
+        Ip{ip: ip, qtype: qtype}
     }
 }
 
-impl fmt::Display for Ip {
+impl fmt::Display for Response {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        match *self {
-            Ip::IpV4(ref ip) => write!(f, "{}", ip),
-            Ip::IpV6(ref ip) => write!(f, "{}", ip),
+        let mut res_str = String::new();
+
+        for xd in &self.ip/*[0..&self.ip.len()-1]*/ {
+            res_str.push_str(&xd.qtype.to_string());
+            res_str.push_str(" ");
+            res_str.push_str(&xd.ip);
+            res_str.push_str("\n");
         }
+        //res_str.push_str(&self.ip[&self.ip.len() -1]);
+        write!(f, "Domain: {}\nIps:\n{}", self.name, res_str)
+    }
+}
+
+impl Response {
+    fn new(name: String, ip: Vec<Ip>) -> Self {
+        Response{name: name, ip: ip}
     }
 }
 
 pub fn parse_response(buf: &[u8], response_start_index: usize)-> Result<Response, CustomError> {
     //Todo: Unwrap iwie raus xD
-    check_response_status(&to_binary_vec(&buf[2..4])?)?;
 
-    let domain_name_index = get_name_index(((buf[response_start_index] as u16) << 8) | buf[response_start_index + 1] as u16);
-    Ok(Response::new(getDomain(&buf, domain_name_index)?, getIp(&buf, response_start_index, true)?))
+    check_response_status(&to_binary_vec(&buf[2..4])?)?;
+    let name = ((buf[response_start_index] as u16) << 8) | buf[response_start_index + 1] as u16;
+    let domain_name_index = get_name_index(name);
+
+    Ok(Response::new(getDomainR(&buf, domain_name_index), getIpR(&buf, response_start_index)?))
 }
 
+
+
 //Todo: ipv6 noch überprüfen
-fn getIp(response: &[u8], response_start_index: usize, ipv4: bool) -> Result<Ip, CustomError> {
+fn getIpR(response: &[u8], response_start_index: usize) -> Result<Vec<Ip>, CustomError> {
+
+    let mut res = vec![];
+
+    let qtype = Qtype::getQtype((((response[response_start_index+2] as u16) << 8) | response[response_start_index + 3] as u16) as usize)?;
     let length = (((response[response_start_index+10] as u16) << 8) | response[response_start_index + 11] as u16) as usize;
     let ip_start_index = response_start_index + 12;
 
-    let ipv4 = (ip_start_index..ip_start_index+length).map(|a|format!("{}.", response[a])).collect::<String>().trim_end_matches(".").to_string();
-    Ok((Ip::IpV4(ipv4)))
+    match qtype {
+        Qtype::A => {
+            let mut ip = (ip_start_index..ip_start_index+length).map(|a|format!("{}.", response[a])).collect::<String>();
+            ip.pop();
+            res.push( Ip::new(ip, qtype))
+        },
+        Qtype::AAAA => {
+            //Todo: Richtige Darstellung
+            let encoded = encode(&response[ip_start_index..ip_start_index+length]).chars().collect::<Vec<char>>();
+            res.push( Ip::new(format_ipv6(&encoded), qtype))
+        },
+        Qtype::CNAME => {
+            println!("clen is {}", length);
+            let ip = (ip_start_index..ip_start_index+length).map(|a|response[a] as char).collect::<String>();
+            res.push(Ip::new(ip, qtype))
+        }
+    }
+
+    ;
+    let next = ip_start_index+length;
+    if next >= response.len() {
+        Ok(res)
+    }
+    else {
+        res.append( &mut getIpR(response, next)?);
+        Ok(res)
+    }
+}
+
+fn format_ipv6(chars: &[char]) -> String {
+    //Nach RFC 5952
+    let mut res = String::new();
+    let mut doubleset = false;
+    let mut doubleoff = false;
+
+    for c in chars.chunks(4) {
+        match c.iter().position(|&x| x != '0') {
+            Some(v) => {
+                res.push_str(&c[v..].iter().collect::<String>());
+                res.push_str(":");
+                if(doubleset) {
+                    doubleoff = true;
+                }
+
+            },
+            None => {
+                if !doubleset {
+                    res.push_str(":");
+                    doubleset = true
+                }
+                else if doubleoff {
+                    res.push_str("0:")
+                }
+            }
+        }
+    }
+    res.pop();
+    res
 }
 
 fn get_name_index(bytes: u16) -> usize {
@@ -84,28 +163,17 @@ fn to_binary_vec(buf: &[u8]) -> Result<Vec<u8>, CustomError> {
     Ok(s.chars().map(|a| a.to_digit(10).unwrap() as u8).collect::<Vec<u8>>())
 }
 
-
-//Todo: index out of bounds abfangen
-fn getDomain(response: &[u8], answerstart: usize) -> Result<String, CustomError> {
-    let length1 = response[answerstart] as usize;
-    let startindex = answerstart + 1;
-    let length2 = response[startindex + length1] as usize;
-    let startindex2 = startindex + length1 + 1;
-
-    let mut s = String::with_capacity(length1 + length2 + 1);
-    //println!("{}", length2);
-    //println!("{}", response[startindex+1] as char);
-
-    for c in startindex..startindex+length1 {
-        write!(&mut s, "{}", response[c] as char);
+fn getDomainR(response: &[u8], index: usize) -> String {
+    let length = response[index] as usize;
+    let startindex = index + 1;
+    let next = startindex+length;
+    let domain_part = (startindex..startindex+length).map(|a|response[a] as char).collect::<String>();
+    if response[next] == 0 {
+        domain_part
     }
-    write!(&mut s, "{}", '.');
-
-    for c in startindex2..startindex2+length2 {
-        write!(&mut s, "{}", response[c] as char);
+    else {
+        format!("{}.{}", domain_part, getDomainR(response,next))
     }
-
-    Ok(s)
 }
 
 fn check_response_status(bytes: &[u8]) -> Result<(), CustomError> {

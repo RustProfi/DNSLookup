@@ -13,9 +13,11 @@ mod customerror;
 mod response;
 use response::parse_response;
 mod question;
+mod qtype;
 use customerror::CustomError;
 use std::process::exit;
-use crate::question::{Header, Question, Qtype, sock_send};
+use crate::qtype::Qtype;
+use crate::question::{Header, Question, sock_send};
 
 
 fn main() {
@@ -66,3 +68,4 @@ fn check_ip(ip: &str) -> bool {
         false
     }
 }
+
