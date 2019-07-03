@@ -15,7 +15,6 @@ use crate::response::parse_response;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    //let message = b"\xAA\xAA\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x07\x65\x78\x61\x6d\x70\x6c\x65\x03\x63\x6f\x6d\x00\x00\x01\x00\x01";
     if args.len() == 2 && &args[1] != "-help" {
         if check_ip(&args[1]) {
             println!("Reverse lookup not supported");
@@ -33,9 +32,10 @@ fn main() {
             sock_send(message)
         }
     } else {
-        println!("Usage is: nslookup [Host Name] | [Host IP] | -help");
+        println!("Usage is: nslookup [Host Name] | -help");
+        //println!("Usage is: nslookup [Host Name] | [Host IP] | -help");
         println!("nslookup foo.bar.com (Returns IP Address for Host Name)");
-        println!("nslookup 123.123.123.123 (Returns Host Name for Address)");
+        //println!("nslookup 123.123.123.123 (Returns Host Name for Address)");
         println!("nslookup -help (Returns this Help Message)");
     }
 }
@@ -51,6 +51,9 @@ fn check_ip(ip: &str) -> bool {
     }
 }
 
+/// prints Records of the receiving packet
+/// # Arguments
+/// * `message` - u8 vector, containing Header and Question
 pub fn sock_send(message: Vec<u8>) {
     let sock = match UdpSocket::bind("0.0.0.0:0") {
         Ok(s) => s,
@@ -78,5 +81,24 @@ pub fn sock_send(message: Vec<u8>) {
     match parse_response(&buf[0..amt], message[..].len()) {
         Ok(response) => println!("{}",response.to_string()),
         Err(e) => println!("{}", e.to_string())
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_check_ip_url() {
+        assert_eq!(check_ip("127.0.0.1"), true);
+    }
+    #[test]
+    fn test_check_ip_ip() {
+        assert_eq!(check_ip("google.com"), false);
+    }
+    #[test]
+    fn test_check_ip_nonip() {
+        assert_eq!(check_ip("127.0.0.1.1"), false);
     }
 }

@@ -8,3 +8,7 @@ cargo build --verbose
 cd ../../Enums_and_Pattern_Matching/exercise_loesung/
 cargo build --verbose
 cd ../live_coding
+cd ../nslookup/
+cargo build --verbose
+cargo doc
+cargo test

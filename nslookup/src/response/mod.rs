@@ -88,7 +88,7 @@ fn get_ip_r(response: &[u8], response_start_index: usize) -> Result<Vec<Ip>, Cus
             result.push( Ip::new(ip, qtype))
         },
         Qtype::AAAA => {
-            let encoded = encode(&response[ip_start_index..ip_start_index+ip_length]).chars().collect::<Vec<char>>();
+            let encoded = encode(&response[ip_start_index..ip_start_index+ip_length])?.chars().collect::<Vec<char>>();
             result.push( Ip::new(format_ipv6(&encoded), qtype))
         },
         Qtype::CNAME => {
@@ -149,7 +149,7 @@ fn get_name_index(bytes: u16) -> usize {
 }
 
 fn to_binary_vec(buf: &[u8]) -> Result<Vec<u8>, CustomError> {
-    let bytes = encode(&buf);
+    let bytes = encode(&buf)?;
     let mut s =  String::with_capacity(bytes.len() * 4);
 
     for i in bytes.chars() {
@@ -179,12 +179,12 @@ fn to_binary_vec(buf: &[u8]) -> Result<Vec<u8>, CustomError> {
 /// Returns hex of a u8
 /// # Arguments
 /// * `bytes` - bytes that we want to parse
-fn encode(bytes: &[u8]) -> String {
+fn encode(bytes: &[u8]) -> Result<String, CustomError> {
     let mut s = String::with_capacity(bytes.len() * 2);
     for &b in bytes {
-        write!(&mut s, "{:02x}", b).unwrap();
+        write!(&mut s, "{:02x}", b)?;
     }
-    s
+    Ok(s)
 }
 
 
