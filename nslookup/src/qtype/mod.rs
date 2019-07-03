@@ -10,8 +10,8 @@ pub enum Qtype {
 impl fmt::Display for Qtype {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match *self {
-            Qtype::A => write!(f, "A"),
-            Qtype::AAAA => write!(f, "AAAA"),
+            Qtype::A => write!(f, "IPv4"),
+            Qtype::AAAA => write!(f, "IPv6"),
             Qtype::CNAME => write!(f, "CNAME"),
         }
     }

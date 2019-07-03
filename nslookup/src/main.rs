@@ -10,7 +10,7 @@ use std::process::exit;
 use crate::qtype::Qtype;
 use crate::question::{Header, Question};
 use std::net::UdpSocket;
-use crate::response::parse_response;
+use crate::response::Response;
 
 
 fn main() {
@@ -51,7 +51,10 @@ fn check_ip(ip: &str) -> bool {
     }
 }
 
-/// prints Records of the receiving packet
+/// Creates a DNS-Package which contains a Header and a Question.
+/// Sends and retreives it.
+/// Prints Records of the receiving packet.
+/// The response contains the same Header + Question and in addition one or more concatenated Answers.
 /// # Arguments
 /// * `message` - u8 vector, containing Header and Question
 pub fn sock_send(message: Vec<u8>) {
@@ -78,7 +81,7 @@ pub fn sock_send(message: Vec<u8>) {
             exit(1)
         }
     };
-    match parse_response(&buf[0..amt], message[..].len()) {
+    match Response::parse_response(&buf[0..amt], message[..].len()) {
         Ok(response) => println!("{}",response.to_string()),
         Err(e) => println!("{}", e.to_string())
     }
