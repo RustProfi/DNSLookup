@@ -10,6 +10,7 @@ use std::fmt;
 use std::vec::Vec;
 use crate::customerror::CustomError;
 use crate::qtype::Qtype;
+use std::intrinsics::transmute;
 
 
 pub struct Response {
@@ -72,21 +73,19 @@ fn getIpR(response: &[u8], response_start_index: usize) -> Result<Vec<Ip>, Custo
 
     match qtype {
         Qtype::A => {
-            let ip = (ip_start_index..ip_start_index+length).map(|a|format!("{}.", response[a])).collect::<String>().trim_end_matches(".").to_string();
+            let mut ip = (ip_start_index..ip_start_index+length).map(|a|format!("{}.", response[a])).collect::<String>();
+            ip.pop();
             res.push( Ip::new(ip, qtype))
         },
         Qtype::AAAA => {
-            println!("len is {}", length);
-            //let ip = (ip_start_index..ip_start_index+length).map(|a|  response[a]).collect::<String>();//.chunks(4).map(|a|format!("{:?}:", a)).collect::<String>();
             //Todo: Richtige Darstellung
-            let xD = encode(&response[ip_start_index..ip_start_index+length]);
-            res.push( Ip::new(xD, qtype))
+            let encoded = encode(&response[ip_start_index..ip_start_index+length]).chars().collect::<Vec<char>>();
+            res.push( Ip::new(format_ipv6(&encoded), qtype))
         },
         Qtype::CNAME => {
             println!("clen is {}", length);
-            let lol = (ip_start_index..ip_start_index+length).map(|a|{ response[a] as char}).collect::<String>();
-            let xD = encode(&response[ip_start_index..ip_start_index+length]);
-            res.push(Ip::new(xD, qtype))
+            let ip = (ip_start_index..ip_start_index+length).map(|a|response[a] as char).collect::<String>();
+            res.push(Ip::new(ip, qtype))
         }
     }
 
@@ -99,6 +98,37 @@ fn getIpR(response: &[u8], response_start_index: usize) -> Result<Vec<Ip>, Custo
         res.append( &mut getIpR(response, next)?);
         Ok(res)
     }
+}
+
+fn format_ipv6(chars: &[char]) -> String {
+    //Nach RFC 5952
+    let mut res = String::new();
+    let mut doubleset = false;
+    let mut doubleoff = false;
+
+    for c in chars.chunks(4) {
+        match c.iter().position(|&x| x != '0') {
+            Some(v) => {
+                res.push_str(&c[v..].iter().collect::<String>());
+                res.push_str(":");
+                if(doubleset) {
+                    doubleoff = true;
+                }
+
+            },
+            None => {
+                if !doubleset {
+                    res.push_str(":");
+                    doubleset = true
+                }
+                else if doubleoff {
+                    res.push_str("0:")
+                }
+            }
+        }
+    }
+    res.pop();
+    res
 }
 
 fn get_name_index(bytes: u16) -> usize {
