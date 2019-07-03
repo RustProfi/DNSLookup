@@ -1,14 +1,9 @@
 use crate::customerror::CustomError;
 use crate::qtype::Qtype;
-use std::net::{UdpSocket};
 use std::str;
-
 use std::fmt::Write;
-use std::fmt;
 use std::vec::Vec;
 use std::num::ParseIntError;
-use crate::response::parse_response;
-use std::process::exit;
 
 pub struct Header {
     /// Header for our query
@@ -106,44 +101,3 @@ fn decode(hex: &str) -> Result<Vec<u8>, ParseIntError> {
         .map(|i| u8::from_str_radix(&hex[i..i + 2], 16))
         .collect()
 }
-
-pub fn sock_send(message: Vec<u8>) {
-    let sock = match UdpSocket::bind("0.0.0.0:0") {
-        Ok(s) => s,
-        Err(e) =>
-            {
-                println!("{}", e.to_string());
-                exit(1)
-            }
-    };
-    let mut buf = [0u8;4096];
-    match sock.send_to(&message[..],"1.1.1.1:53") {
-        Ok(_) => {},
-        Err(e) => {
-            println!("{}", e.to_string());
-            exit(1)
-        }
-    }
-    let amt = match sock.recv(&mut buf) {
-        Ok(s) => s,
-        Err(e) => {
-            println!("{}", e.to_string());
-            exit(1)
-        }
-    };
-    match parse_response(&buf[0..amt], message[..].len()) {
-        Ok(xD) => println!("{}",xD.to_string()),
-        Err(lol) => println!("{:#?}", lol.to_string())
-    }
-}
-/*
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn u16_from_position() {
-        let message = b"\xAA\xAA\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x07\x65\x78\x61\x6d\x70\x6c\x65\x03\x63\x6f\x6d\x00\x00\x01\x00\x01";
-        assert_eq!(message, ())
-    }
-}
-*/

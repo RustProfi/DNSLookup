@@ -1,16 +1,9 @@
-use std::env;
-use std::net::{UdpSocket};
-use std::io::Error;
-use std::str::Utf8Error;
-use std::str;
-use std::num::ParseIntError;
 use std::fmt::Write;
-use std::num;
 use std::fmt;
 use std::vec::Vec;
 use crate::customerror::CustomError;
 use crate::qtype::Qtype;
-use std::intrinsics::transmute;
+
 
 
 pub struct Response {
@@ -32,15 +25,13 @@ impl Ip {
 impl fmt::Display for Response {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         let mut res_str = String::new();
-
-        for xd in &self.ip/*[0..&self.ip.len()-1]*/ {
-            res_str.push_str(&xd.qtype.to_string());
-            res_str.push_str(" ");
-            res_str.push_str(&xd.ip);
+        for ip in &self.ip {
+            res_str.push_str(&ip.qtype.to_string());
+            res_str.push_str(": ");
+            res_str.push_str(&ip.ip);
             res_str.push_str("\n");
         }
-        //res_str.push_str(&self.ip[&self.ip.len() -1]);
-        write!(f, "Domain: {}\nIps:\n{}", self.name, res_str)
+        write!(f, "Domain: {}\nAdress(es):\n{}", self.name, res_str)
     }
 }
 
@@ -58,16 +49,16 @@ pub fn parse_response(buf: &[u8], response_start_index: usize)-> Result<Response
     let name = ((buf[response_start_index] as u16) << 8) | buf[response_start_index + 1] as u16;
     let domain_name_index = get_name_index(name);
 
-    Ok(Response::new(getDomainR(&buf, domain_name_index), getIpR(&buf, response_start_index)?))
+    Ok(Response::new(get_domain_r(&buf, domain_name_index), get_ip_r(&buf, response_start_index)?))
 }
 
 
 
-fn getIpR(response: &[u8], response_start_index: usize) -> Result<Vec<Ip>, CustomError> {
+fn get_ip_r(response: &[u8], response_start_index: usize) -> Result<Vec<Ip>, CustomError> {
 
     let mut res = vec![];
 
-    let qtype = Qtype::getQtype((((response[response_start_index+2] as u16) << 8) | response[response_start_index + 3] as u16) as usize)?;
+    let qtype = Qtype::get_qtype((((response[response_start_index+2] as u16) << 8) | response[response_start_index + 3] as u16) as usize)?;
     let length = (((response[response_start_index+10] as u16) << 8) | response[response_start_index + 11] as u16) as usize;
     let ip_start_index = response_start_index + 12;
 
@@ -93,7 +84,7 @@ fn getIpR(response: &[u8], response_start_index: usize) -> Result<Vec<Ip>, Custo
         Ok(res)
     }
     else {
-        res.append( &mut getIpR(response, next)?);
+        res.append( &mut get_ip_r(response, next)?);
         Ok(res)
     }
 }
@@ -162,12 +153,12 @@ fn to_binary_vec(buf: &[u8]) -> Result<Vec<u8>, CustomError> {
             'e' | 'E' => write!(&mut s, "1110"),
             'f' | 'F' => write!(&mut s, "1111"),
             _ => return Err(CustomError::FaultyHexError),
-        };
+        }?
     }
     Ok(s.chars().map(|a| a as u8).collect::<Vec<u8>>())
 }
 
-fn getDomainR(response: &[u8], index: usize) -> String {
+fn get_domain_r(response: &[u8], index: usize) -> String {
     let length = response[index] as usize;
     let startindex = index + 1;
     let next = startindex+length;
@@ -176,7 +167,7 @@ fn getDomainR(response: &[u8], index: usize) -> String {
         domain_part
     }
     else {
-        format!("{}.{}", domain_part, getDomainR(response,next))
+        format!("{}.{}", domain_part, get_domain_r(response, next))
     }
 }
 
