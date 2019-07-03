@@ -20,11 +20,11 @@ pub struct Question {
 }
 
 impl Question {
-    pub fn new(header: Vec<u8>, url: &str, qtype: Qtype) -> Vec<u8> {
+    pub fn new_question(header: Vec<u8>, url: &str, qtype: Qtype) -> Vec<u8> {
         let mut vec = Vec::new();
         vec.extend(header);
-        if url.len() > 0 {
-            for x in url.split(".").collect::<Vec<&str>>() {
+        if !url.is_empty() {
+            for x in url.split('.').collect::<Vec<&str>>() {
                 let url_bytes: Vec<_> = x.bytes().collect();
                 let len = url_bytes.len().to_be_bytes().to_vec();
                 let mut question: Vec<_> = len.into_iter().filter(|&i| i != 0).collect();
@@ -44,7 +44,7 @@ impl Question {
 }
 
 impl Header {
-    pub fn new(id: u16, qr: bool, opcode: bool) -> Result<Vec<u8>,CustomError> {
+    pub fn new_message(id: u16, qr: bool, opcode: bool) -> Result<Vec<u8>,CustomError> {
         let queryparams = format!("{}000{}00100000000", qr as i32, opcode as i32);
         let m = format!("{:0>4x}{}0001000000000000",id, binary_to_hex(queryparams)?);
         Ok(decode(&m)?)
@@ -91,6 +91,8 @@ fn u16_from_position(position: usize) -> u16 {
         _ => 0,
     }
 }
+
+
 
 /// Returns a u8 vector on success else an Error
 /// # Arguments

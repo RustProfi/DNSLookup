@@ -20,16 +20,16 @@ fn main() {
         if check_ip(&args[1]) {
             println!("Reverse lookup not supported");
         } else {
-            let header = match Header::new(2,false,false) {
+            let header = match Header::new_message(2, false, false) {
                 Ok(x) => x,
                 Err(e) => {
                     println!("{}", e.to_string());
                     exit(1)
                 }
             };
-            let message = Question::new(header.clone(), &args[1], Qtype::A);
+            let message = Question::new_question(header.clone(), &args[1], Qtype::A);
             sock_send(message);
-            let message = Question::new(header, &args[1], Qtype::AAAA);
+            let message = Question::new_question(header, &args[1], Qtype::AAAA);
             sock_send(message)
         }
     } else {
@@ -44,8 +44,8 @@ fn main() {
 /// # Arguments
 /// * `bytes` - bytes that we want to parse
 fn check_ip(ip: &str) -> bool {
-    if ip.split(".").count() == 4 {
-        ip.split(".").all(|s| s.parse::<i32>().is_ok())
+    if ip.split('.').count() == 4 {
+        ip.split('.').all(|s| s.parse::<i32>().is_ok())
     } else {
         false
     }
