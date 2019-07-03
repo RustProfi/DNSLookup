@@ -1,3 +1,4 @@
+extern crate nslookup;
 use std::env;
 use std::str;
 use std::vec::Vec;
