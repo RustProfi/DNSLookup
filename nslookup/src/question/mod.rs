@@ -1,13 +1,9 @@
 use crate::customerror::CustomError;
 use crate::qtype::Qtype;
-use std::env;
 use std::net::{UdpSocket};
-use std::io::Error;
-use std::str::Utf8Error;
 use std::str;
 
 use std::fmt::Write;
-use std::num;
 use std::fmt;
 use std::vec::Vec;
 use std::num::ParseIntError;
@@ -140,3 +136,14 @@ pub fn sock_send(message: Vec<u8>) {
         Err(lol) => println!("{:#?}", lol.to_string())
     }
 }
+/*
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn u16_from_position() {
+        let message = b"\xAA\xAA\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x07\x65\x78\x61\x6d\x70\x6c\x65\x03\x63\x6f\x6d\x00\x00\x01\x00\x01";
+        assert_eq!(message, ())
+    }
+}
+*/
