@@ -12,7 +12,7 @@ pub struct Header {
     pub opcode: bool,
 }
 
-/// A DNS Header is represented here
+/// A DNS Question is represented here
 pub struct Question {
     pub header: Vec<u8>,
     pub url: String,
