@@ -32,7 +32,7 @@ impl Qtype {
             1 => Ok(Qtype::A),
             28 => Ok(Qtype::AAAA),
             5_ => Ok(Qtype::CNAME),
-            _ => Err(CustomError::QtypeNotSupported)
+            _ => Err(CustomError::QtypeNotSupported(value))
         }
     }
 }

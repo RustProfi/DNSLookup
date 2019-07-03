@@ -6,10 +6,10 @@ pub enum CustomError {
     ParseIntError(std::num::ParseIntError),
     FmtError(std::fmt::Error),
     IoError(std::io::Error),
-    Utf8Error(std::str::Utf8Error),
     ResponseError,
     FaultyHexError,
-    QtypeNotSupported,
+    QtypeNotSupported(usize),
+    EmptyResponse,
 }
 
 impl fmt::Display for CustomError {
@@ -18,12 +18,12 @@ impl fmt::Display for CustomError {
             CustomError::ParseIntError(ref e) => write!(f, "{}", e),
             CustomError::FmtError(ref e) => write!(f, "{}", e),
             CustomError::IoError(ref e) => write!(f, "{}", e),
-            CustomError::Utf8Error(ref e) => write!(f, "{}", e),
             CustomError::Overflow => write!(f, "More than usize:Max nonmatching elements"),
             CustomError::BindError => write!(f, "couldn't bind to address"),
             CustomError::ResponseError => write!(f, "Response ist fehlerbehaftet."),
             CustomError::FaultyHexError => write!(f, "Given value was not hex."),
-            CustomError::QtypeNotSupported => write!(f, "Qtype is not supported"),
+            CustomError::QtypeNotSupported(ref x) => write!(f, "Qtype {} is not supported", x),
+            CustomError::EmptyResponse => write!(f, "Response is faulty"),
         }
     }
 }
@@ -34,12 +34,12 @@ impl fmt::Debug for CustomError {
             CustomError::ParseIntError(ref e) => write!(f, "{}", e),
             CustomError::FmtError(ref e) => write!(f, "{}", e),
             CustomError::IoError(ref e) => write!(f, "{}", e),
-            CustomError::Utf8Error(ref e) => write!(f, "{}", e),
             CustomError::Overflow => write!(f, "More than usize:Max nonmatching elements"),
             CustomError::BindError => write!(f, "couldn't bind to address"),
             CustomError::ResponseError => write!(f, "Response ist fehlerbehaftet."),
             CustomError::FaultyHexError => write!(f, "Given value was not hex."),
-            CustomError::QtypeNotSupported => write!(f, "Qtype is not supported."),
+            CustomError::QtypeNotSupported(ref x) => write!(f, "Qtype {} is not supported", x),
+            CustomError::EmptyResponse => write!(f, "Response is faulty"),
         }
     }
 }
@@ -47,12 +47,6 @@ impl fmt::Debug for CustomError {
 impl From<std::io::Error> for CustomError {
     fn from(error: std::io::Error) -> Self {
         CustomError::IoError(error)
-    }
-}
-
-impl From<std::str::Utf8Error> for CustomError {
-    fn from(error: std::str::Utf8Error) -> Self {
-        CustomError::Utf8Error(error)
     }
 }
 

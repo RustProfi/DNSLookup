@@ -51,8 +51,9 @@ impl Response {
 }
 
 pub fn parse_response(buf: &[u8], response_start_index: usize)-> Result<Response, CustomError> {
-    //Todo: Unwrap iwie raus xD
-
+    if response_start_index >= buf.len() {
+        return Err(CustomError::EmptyResponse);
+    }
     check_response_status(&to_binary_vec(&buf[2..4])?)?;
     let name = ((buf[response_start_index] as u16) << 8) | buf[response_start_index + 1] as u16;
     let domain_name_index = get_name_index(name);
@@ -62,7 +63,6 @@ pub fn parse_response(buf: &[u8], response_start_index: usize)-> Result<Response
 
 
 
-//Todo: ipv6 noch überprüfen
 fn getIpR(response: &[u8], response_start_index: usize) -> Result<Vec<Ip>, CustomError> {
 
     let mut res = vec![];
@@ -78,12 +78,10 @@ fn getIpR(response: &[u8], response_start_index: usize) -> Result<Vec<Ip>, Custo
             res.push( Ip::new(ip, qtype))
         },
         Qtype::AAAA => {
-            //Todo: Richtige Darstellung
             let encoded = encode(&response[ip_start_index..ip_start_index+length]).chars().collect::<Vec<char>>();
             res.push( Ip::new(format_ipv6(&encoded), qtype))
         },
         Qtype::CNAME => {
-            println!("clen is {}", length);
             let ip = (ip_start_index..ip_start_index+length).map(|a|response[a] as char).collect::<String>();
             res.push(Ip::new(ip, qtype))
         }
@@ -106,19 +104,25 @@ fn format_ipv6(chars: &[char]) -> String {
     let mut doubleset = false;
     let mut doubleoff = false;
 
-    for c in chars.chunks(4) {
-        match c.iter().position(|&x| x != '0') {
+    for (i, chunk) in chars.chunks(4).enumerate() {
+        match chunk.iter().position(|&x| x != '0') {
             Some(v) => {
-                res.push_str(&c[v..].iter().collect::<String>());
+                res.push_str(&chunk[v..].iter().collect::<String>());
                 res.push_str(":");
-                if(doubleset) {
+                if doubleset {
                     doubleoff = true;
                 }
 
             },
             None => {
                 if !doubleset {
-                    res.push_str(":");
+                    if i == 0 {
+                        res.push_str("::");
+                    }
+                    else {
+                        res.push_str(":");
+                    }
+
                     doubleset = true
                 }
                 else if doubleoff {
@@ -160,7 +164,7 @@ fn to_binary_vec(buf: &[u8]) -> Result<Vec<u8>, CustomError> {
             _ => return Err(CustomError::FaultyHexError),
         };
     }
-    Ok(s.chars().map(|a| a.to_digit(10).unwrap() as u8).collect::<Vec<u8>>())
+    Ok(s.chars().map(|a| a as u8).collect::<Vec<u8>>())
 }
 
 fn getDomainR(response: &[u8], index: usize) -> String {
@@ -177,8 +181,6 @@ fn getDomainR(response: &[u8], index: usize) -> String {
 }
 
 fn check_response_status(bytes: &[u8]) -> Result<(), CustomError> {
-    //println!("{:?}", bytes);
-    //bytes[0] ist response,
     if bytes.len() < 16 || bytes[0] == 0 || bytes[12] == 1 || bytes[13] == 1 || bytes[14] == 1 || bytes[15] == 1 {
         Err(CustomError::ResponseError)
     }
