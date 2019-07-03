@@ -101,3 +101,14 @@ fn decode(hex: &str) -> Result<Vec<u8>, ParseIntError> {
         .map(|i| u8::from_str_radix(&hex[i..i + 2], 16))
         .collect()
 }
+
+#[cfg(test)]
+mod tests {
+    // Note this useful idiom: importing names from outer (for mod tests) scope.
+    use super::*;
+
+    #[test]
+    fn test_u16_from_position() {
+        assert_eq!(u16_from_position(0), 8);
+    }
+}
