@@ -38,7 +38,7 @@ impl Qtype {
         match value {
             1 => Ok(Qtype::A),
             28 => Ok(Qtype::AAAA),
-            5_ => Ok(Qtype::CNAME),
+            5 => Ok(Qtype::CNAME),
             _ => Err(CustomError::QtypeNotSupported(value))
         }
     }

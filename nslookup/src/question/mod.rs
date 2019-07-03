@@ -27,11 +27,11 @@ impl Question {
     /// * `header` - u8 Vec of specified header
     /// * `url` - url
     /// * `qtype` - qtype (A or AAAA)
-    pub fn new(header: Vec<u8>, url: &str, qtype: Qtype) -> Vec<u8> {
+    pub fn new_question(header: Vec<u8>, url: &str, qtype: Qtype) -> Vec<u8> {
         let mut vec = Vec::new();
         vec.extend(header);
-        if url.len() > 0 {
-            for x in url.split(".").collect::<Vec<&str>>() {
+        if !url.is_empty() {
+            for x in url.split('.').collect::<Vec<&str>>() {
                 let url_bytes: Vec<_> = x.bytes().collect();
                 let len = url_bytes.len().to_be_bytes().to_vec();
                 let mut question: Vec<_> = len.into_iter().filter(|&i| i != 0).collect();
@@ -58,7 +58,7 @@ impl Header {
    /// * `id` - arbitrary 16 bit identifier
    /// * `qr` - specify if query or response
    /// * `opcode` - qtype (A or AAAA) query type (standard/inverse)
-    pub fn new(id: u16, qr: bool, opcode: bool) -> Result<Vec<u8>,CustomError> {
+    pub fn new_message(id: u16, qr: bool, opcode: bool) -> Result<Vec<u8>,CustomError> {
         let queryparams = format!("{}000{}00100000000", qr as i32, opcode as i32);
         let m = format!("{:0>4x}{}0001000000000000",id, binary_to_hex(queryparams)?);
         Ok(decode(&m)?)
