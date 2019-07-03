@@ -1,5 +1,4 @@
 use crate::customerror::CustomError;
-use crate::customerror::CustomError::QtypeNotSupported;
 use std::fmt;
 
 pub enum Qtype {
@@ -27,7 +26,7 @@ impl Qtype {
         }
     }
 
-    pub fn getQtype(value: usize) -> Result<Self, CustomError> {
+    pub fn get_qtype(value: usize) -> Result<Self, CustomError> {
         match value {
             1 => Ok(Qtype::A),
             28 => Ok(Qtype::AAAA),

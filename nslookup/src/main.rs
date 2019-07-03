@@ -1,23 +1,16 @@
 use std::env;
-use std::net::{UdpSocket};
-use std::io::Error;
-use std::str::Utf8Error;
 use std::str;
-use std::num::ParseIntError;
-use std::fmt::Write;
-use std::num;
-use std::fmt;
 use std::vec::Vec;
 
 mod customerror;
 mod response;
-use response::parse_response;
 mod question;
 mod qtype;
-use customerror::CustomError;
 use std::process::exit;
 use crate::qtype::Qtype;
-use crate::question::{Header, Question, sock_send};
+use crate::question::{Header, Question};
+use std::net::UdpSocket;
+use crate::response::parse_response;
 
 
 fn main() {
@@ -69,3 +62,32 @@ fn check_ip(ip: &str) -> bool {
     }
 }
 
+pub fn sock_send(message: Vec<u8>) {
+    let sock = match UdpSocket::bind("0.0.0.0:0") {
+        Ok(s) => s,
+        Err(e) =>
+            {
+                println!("{}", e.to_string());
+                exit(1)
+            }
+    };
+    let mut buf = [0u8;4096];
+    match sock.send_to(&message[..],"1.1.1.1:53") {
+        Ok(_) => {},
+        Err(e) => {
+            println!("{}", e.to_string());
+            exit(1)
+        }
+    }
+    let amt = match sock.recv(&mut buf) {
+        Ok(s) => s,
+        Err(e) => {
+            println!("{}", e.to_string());
+            exit(1)
+        }
+    };
+    match parse_response(&buf[0..amt], message[..].len()) {
+        Ok(response) => println!("{}",response.to_string()),
+        Err(e) => println!("{}", e.to_string())
+    }
+}
