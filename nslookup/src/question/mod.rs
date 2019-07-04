@@ -103,7 +103,7 @@ impl DnsMessageBuilder {
 fn binary_to_hex(binary: &str) -> Result<String, CustomError> {
     let mut s = String::with_capacity(4);
     for x in binary.chars().collect::<Vec<char>>().chunks_exact(4) {
-        write!(&mut s, "{:x}", recursive_find(0, &x)?)?;
+        write!(&mut s, "{:x}", recursive_find(0, &x))?;
     }
     Ok(s)
 }
@@ -112,19 +112,19 @@ fn binary_to_hex(binary: &str) -> Result<String, CustomError> {
 /// # Arguments
 /// * `number` - number
 /// * `chars` - chunk
-fn recursive_find(mut number: u16, chars: &[char]) -> Result<u16, CustomError> {
+fn recursive_find(number: u16, chars: &[char]) -> u16 {
+    let mut result = number;
     let mut chars_rec = chars.to_owned();
     let position = chars_rec.iter().position(|&x| x == '1');
-    if position.is_some() {
-        let pos = match position {
-            Some(e) => e,
-            None => return Err(CustomError::Overflow)
-        };
-        chars_rec[pos] = '0';
-        number += recursive_find(u16_from_position(pos), &chars_rec)?;
 
+    match position {
+        Some(val) => {
+            chars_rec[val] = '0';
+            result += recursive_find(u16_from_position(val), &chars_rec);
+            result
+        },
+        None => result
     }
-    Ok(number)
 }
 
 /// returns u16 representation of given position
