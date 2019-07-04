@@ -45,11 +45,7 @@ fn main() {
 /// # Arguments
 /// * `bytes` - bytes that we want to parse
 fn check_ip(ip: &str) -> bool {
-    if ip.split('.').count() == 4 {
-        ip.split('.').all(|s| s.parse::<i32>().is_ok())
-    } else {
-        false
-    }
+    ip.split('.').map(|s| s.parse::<i32>().is_ok()).count() == 4
 }
 
 /// prints Records of the receiving packet
