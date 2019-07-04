@@ -5,7 +5,7 @@ use std::fmt::Write;
 use std::vec::Vec;
 use std::num::ParseIntError;
 
-/// A DNS Header is represented here
+/// Create DNS-Headers
 pub struct Header {
     pub id: u16,
     pub qr: bool,
@@ -13,28 +13,27 @@ pub struct Header {
 }
 
 impl Header {
+    /// Returns a new Header
+  ///
+  /// # Arguments
+  ///
+  /// * `id` - arbitrary 16 bit identifier
+  /// * `qr` - specify if query or response
+  /// * `opcode` - qtype (A or AAAA) query type (standard/inverse)
     pub fn new(id: u16, qr: bool, opcode: bool) -> Self {
         Header {id, qr, opcode}
     }
 
-    /// Returns the header as u8 Vector
-   ///
-   /// # Arguments
-   ///
-   /// * `id` - arbitrary 16 bit identifier
-   /// * `qr` - specify if query or response
-   /// * `opcode` - qtype (A or AAAA) query type (standard/inverse)
-    pub fn get_message(&self) -> Result<Vec<u8>, CustomError> {
+    /// Parses the Header in an u8 Vector
+    pub fn get_header(&self) -> Result<Vec<u8>, CustomError> {
         let queryparams = format!("{}000{}00100000000", self.qr as i32, self.opcode as i32);
         let m = format!("{:0>4x}{}0001000000000000", self.id, binary_to_hex(&queryparams)?);
         Ok(decode(&m)?)
     }
 }
 
-
-/// A DNS Question is represented here
+/// Create DNS-Questions
 pub struct Question {
-    pub header: Header,
     pub url: String,
     pub qtype: Qtype,
 }
@@ -47,13 +46,13 @@ impl Question {
     /// * `header` - u8 Vec of specified header
     /// * `url` - url
     /// * `qtype` - qtype (A or AAAA)
-    pub fn new(header: Header, url: &str, qtype: Qtype) -> Self {
-        Question{ header, url: String::from(url), qtype}
+    pub fn new(url: &str, qtype: Qtype) -> Self {
+        Question{url: String::from(url), qtype}
     }
 
-    /// Returns an u8 Vec made up of header and question
-    pub fn get_question(self) -> Result<Vec<u8>, CustomError> {
-        let mut vec = self.header.get_message()?;
+    /// Parses the Question in an u8 Vector.
+    pub fn get_question(&self) -> Vec<u8> {
+        let mut vec = vec![];
         let rest = vec![0, 0, self.qtype.value(),0,1];
         if !self.url.is_empty() {
             for x in self.url.split('.').collect::<Vec<&str>>() {
@@ -63,15 +62,40 @@ impl Question {
                 vec.extend(url_bytes);
             }
             vec.extend(rest);
-            Ok(vec)
+            vec
         } else {
             vec.extend(rest);
-            Ok(vec)
+            vec
         }
     }
 }
 
+/// Use the DnsMessageBuilder to build DNS Messages
+pub struct DnsMessageBuilder {
+    pub header: Header,
+    pub questions: Vec<Question>
+}
 
+impl DnsMessageBuilder {
+    /// Returns a new DNSPackage
+    ///
+    /// # Arguments
+    ///
+    /// * `header` - A header struct
+    /// * `questions` - A vector of questions
+    pub fn new(header: Header, questions: Vec<Question>) -> Self {
+        DnsMessageBuilder {header, questions}
+    }
+
+    /// Builds the dns messages
+    pub fn build_messages(&self) -> Result<Vec<Vec<u8>>, CustomError> {
+        let mut res = vec![];
+        for q in &self.questions {
+            res.push([self.header.get_header()?, q.get_question()].concat());
+        }
+        Ok(res)
+    }
+}
 
 /// returns binary as hex representation
 /// # Arguments

@@ -9,9 +9,9 @@ mod question;
 mod qtype;
 use std::process::exit;
 use crate::qtype::Qtype;
-use crate::question::{Header, Question};
 use std::net::UdpSocket;
 use crate::response::Response;
+use crate::question::{Header, Question, DnsMessageBuilder};
 
 
 fn main() {
@@ -21,23 +21,18 @@ fn main() {
             println!("Reverse lookup not supported");
         } else {
             let header = Header::new(2, false, false);
-            let message = match Question::new(header, &args[1], Qtype::A).get_question() {
+            let mut messages = vec![];
+            messages.push(Question::new(&args[1], Qtype::A));
+            messages.push(Question::new(&args[1], Qtype::AAAA));
+
+            let pack = match DnsMessageBuilder::new(header, messages).build_messages() {
                 Ok(val) => val,
                 Err(e) => {
                     println!("{}", e);
                     exit(1)
                 }
             };
-            sock_send(message);
-            let header = Header::new(2, false, false);
-            let message = match Question::new(header, &args[1], Qtype::AAAA).get_question() {
-                Ok(val) => val,
-                Err(e) => {
-                    println!("{}", e);
-                    exit(1)
-                }
-            };
-            sock_send(message)
+            sock_send(pack)
         }
     } else {
         println!("Usage is: nslookup [Host Name] | -help");
@@ -61,33 +56,35 @@ fn check_ip(ip: &str) -> bool {
 /// The response contains the same Header + Question and in addition one or more concatenated Answers.
 /// # Arguments
 /// * `message` - u8 vector, containing Header and Question
-pub fn sock_send(message: Vec<u8>) {
-    let sock = match UdpSocket::bind("0.0.0.0:0") {
-        Ok(s) => s,
-        Err(e) =>
-            {
+pub fn sock_send(messages: Vec<Vec<u8>>) {
+    for message in messages {
+        let sock = match UdpSocket::bind("0.0.0.0:0") {
+            Ok(s) => s,
+            Err(e) =>
+                {
+                    println!("{}", e.to_string());
+                    exit(1)
+                }
+        };
+        let mut buf = [0u8;4096];
+        match sock.send_to(&message[..],"1.1.1.1:53") {
+            Ok(_) => {},
+            Err(e) => {
                 println!("{}", e.to_string());
                 exit(1)
             }
-    };
-    let mut buf = [0u8;4096];
-    match sock.send_to(&message[..],"1.1.1.1:53") {
-        Ok(_) => {},
-        Err(e) => {
-            println!("{}", e.to_string());
-            exit(1)
         }
-    }
-    let amt = match sock.recv(&mut buf) {
-        Ok(s) => s,
-        Err(e) => {
-            println!("{}", e.to_string());
-            exit(1)
+        let amt = match sock.recv(&mut buf) {
+            Ok(s) => s,
+            Err(e) => {
+                println!("{}", e.to_string());
+                exit(1)
+            }
+        };
+        match Response::parse_response(&buf[0..amt], message[..].len()) {
+            Ok(response) => println!("{}",response.to_string()),
+            Err(e) => println!("{}", e.to_string())
         }
-    };
-    match Response::parse_response(&buf[0..amt], message[..].len()) {
-        Ok(response) => println!("{}",response.to_string()),
-        Err(e) => println!("{}", e.to_string())
     }
 }
 

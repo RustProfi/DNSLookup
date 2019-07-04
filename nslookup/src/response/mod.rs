@@ -67,7 +67,7 @@ impl Response {
     }
 }
 
-/// A struct that holds the Response
+/// A struct that holds an Ip
 #[derive(Debug)]
 #[derive(PartialEq)]
 pub struct Ip {
