@@ -2,6 +2,7 @@ use crate::customerror::CustomError;
 use std::fmt;
 
 /// Variation of Qtype
+#[derive(PartialEq)]
 pub enum Qtype {
     /// IPv4
     A,
@@ -12,6 +13,16 @@ pub enum Qtype {
 }
 
 impl fmt::Display for Qtype {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        match *self {
+            Qtype::A => write!(f, "IPv4"),
+            Qtype::AAAA => write!(f, "IPv6"),
+            Qtype::CNAME => write!(f, "CNAME"),
+        }
+    }
+}
+
+impl fmt::Debug for Qtype {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match *self {
             Qtype::A => write!(f, "IPv4"),

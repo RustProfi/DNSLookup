@@ -49,11 +49,13 @@ impl Response {
         check_response_status(buf[2], buf[3])?;
         let domain_index_raw = combine_u8tou16(buf[response_start_index], buf[response_start_index + 1]);
 
-        Ok(Response::new(get_domain_r(&buf, get_name_index(domain_index_raw)), get_ip_r(&buf, response_start_index)?))
+        Ok(Response::new(get_domain_r(&buf, get_name_index(domain_index_raw))?, get_ip_r(&buf, response_start_index)?))
     }
 }
 
 /// A struct that holds the Response
+#[derive(Debug)]
+#[derive(PartialEq)]
 pub struct Ip {
     pub ip: String,
     pub qtype: Qtype,
@@ -74,7 +76,7 @@ impl Ip {
 /// Checks a) if the given DNS-Package is acutally a response
 /// and b) if errors occured.
 ///
-///         flag1                    flag2
+///+++++++++flag1++++++++++++++++++++flag2+++++++++++++
 /// 7  6  5  4  3  2  1     0  7  6  5  4  3  2  1  0
 ///+--+--+--+--+--+--+--+  +--+--+--+--+--+--+--+--+--+
 ///|QR|   Opcode  |AA|TC|  |RD|RA|   Z    |   RCODE   |
@@ -126,16 +128,23 @@ fn bit_at(input: u8, n: u8) -> bool {
 ///
 /// * `response` - The complete DNS-Package
 /// * `index` - The index where the first length of the domain is located (this is in the question section)
-fn get_domain_r(response: &[u8], index: usize) -> String {
+fn get_domain_r(response: &[u8], index: usize) ->  Result<String, CustomError> {
     let length = response[index] as usize;
     let startindex = index + 1;
     let next = startindex + length;
-    let domain_build = (startindex..startindex+length).map(|a|response[a] as char).collect::<String>();
-    if response[next] == 0 {
-        domain_build
+
+    if next < response.len() {
+        let domain_build = (startindex..startindex+length).map(|a|response[a] as char).collect::<String>();
+
+        if response[next] == 0 {
+            Ok(domain_build)
+        }
+        else {
+            Ok(format!("{}.{}", domain_build, get_domain_r(response, next)?))
+        }
     }
     else {
-        format!("{}.{}", domain_build, get_domain_r(response, next))
+        Err(CustomError::Overflow)
     }
 }
 
@@ -151,6 +160,10 @@ fn get_domain_r(response: &[u8], index: usize) -> String {
 /// * `response` - The complete DNS-Package
 /// * `answer_start_index` - The index where the first actual answer begins
 fn get_ip_r(response: &[u8], answer_start_index: usize) -> Result<Vec<Ip>, CustomError> {
+    if answer_start_index + 12 >= response.len() {
+        return Err(CustomError::Overflow);
+    }
+
     let mut result = vec![];
 
     let qtypehex = combine_u8tou16(response[answer_start_index + 2], response[answer_start_index + 3]) as usize;
@@ -166,7 +179,7 @@ fn get_ip_r(response: &[u8], answer_start_index: usize) -> Result<Vec<Ip>, Custo
             result.push( Ip::new(ip, qtype))
         },
         Qtype::AAAA => {
-            let encoded = encode(&response[ip_start_index..ip_start_index+ip_length])?.chars().collect::<Vec<char>>();
+            let encoded = encode(&response[ip_start_index..ip_start_index + ip_length])?.chars().collect::<Vec<char>>();
             result.push( Ip::new(format_ipv6(&encoded), qtype))
         },
         Qtype::CNAME => {
@@ -263,14 +276,65 @@ fn encode(bytes: &[u8]) -> Result<String, CustomError> {
     Ok(s)
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
+
     #[test]
-    fn test() {
-        let x = get_name_index(3000);
-        assert_eq!(x, 12 as usize);
+    fn test_check_response_status() {
+        assert_eq!(check_response_status(129 as u8, 128 as u8).unwrap(), (()));
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_check_response_status2() {
+        assert_eq!(check_response_status(1 as u8, 128 as u8).unwrap(), (()));
+    }
+
+    #[test]
+    fn test_bit_at() {
+        assert_eq!(false, bit_at(0,0));
+        assert_eq!(true, bit_at(1, 0));
+    }
+
+    #[test]
+    fn test_get_domain_r() {
+        let response: Vec<u8> = vec![0, 2, 129, 128, 0, 1, 0, 1, 0, 0, 0, 0, 6, 103, 111, 111, 103, 108, 101, 3, 99, 111, 109, 0, 0, 28, 0, 1, 192, 12, 0, 28, 0, 1, 0, 0, 1, 19, 0, 16, 42, 0, 20, 80, 64, 1, 8, 32, 0, 0, 0, 0, 0, 0, 32, 14];
+        assert_eq!(String::from("google.com"), get_domain_r(&response, 12).unwrap());
+    }
+
+    #[test]
+    fn test_get_ip_r() {
+        let response: Vec<u8> = vec![0, 2, 129, 128, 0, 1, 0, 1, 0, 0, 0, 0, 6, 103, 111, 111, 103, 108, 101, 3, 99, 111, 109, 0, 0, 28, 0, 1, 192, 12, 0, 28, 0, 1, 0, 0, 1, 19, 0, 16, 42, 0, 20, 80, 64, 1, 8, 32, 0, 0, 0, 0, 0, 0, 32, 14];
+        let ip = Ip::new(String::from("2a00:1450:4001:820::200e"), Qtype::AAAA);
+        let ips = vec![ip];
+        assert_eq!(get_ip_r(&response, 28).unwrap(), ips);
+    }
+
+    #[test]
+    fn test_format_ipv6() {
+        let vec1 = "20010000000000000001000000000001".chars().collect::<Vec<char>>();
+        let vec2 = "2a0014504001081c000000000000200e".chars().collect::<Vec<char>>();
+        let vec3 = "00000000000000000000ffff40bc3892".chars().collect::<Vec<char>>();
+        assert_eq!(format_ipv6(&vec1), String::from("2001::1:0:0:1"));
+        assert_eq!(format_ipv6(&vec2), String::from("2a00:1450:4001:81c::200e"));
+        assert_eq!(format_ipv6(&vec3), String::from("::ffff:40bc:3892"));
+    }
+
+    #[test]
+    fn test_get_name_index() {
+        assert_eq!(get_name_index(49164), 12);
+    }
+
+    #[test]
+    fn test_combine_u8tou16() {
+        assert_eq!(combine_u8tou16(181, 180), 46516)
+    }
+
+    #[test]
+    fn test_encode() {
+        let response: Vec<u8> = vec![0, 2, 129, 128, 0, 1, 250];
+        assert_eq!(encode(&response).unwrap(), String::from("000281800001fa"));
     }
 }

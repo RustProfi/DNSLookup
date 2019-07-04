@@ -16,7 +16,7 @@ impl fmt::Display for CustomError {
             CustomError::ParseIntError(ref e) => write!(f, "{}", e),
             CustomError::FmtError(ref e) => write!(f, "{}", e),
             CustomError::IoError(ref e) => write!(f, "{}", e),
-            CustomError::Overflow => write!(f, "More than usize:Max nonmatching elements"),
+            CustomError::Overflow => write!(f, "More than usize: Max nonmatching elements"),
             CustomError::ResponseError => write!(f, "Response ist fehlerbehaftet."),
             CustomError::QtypeNotSupported(ref x) => write!(f, "Qtype {} is not supported", x),
             CustomError::EmptyResponse => write!(f, "Response is faulty"),
