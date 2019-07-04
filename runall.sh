@@ -7,7 +7,7 @@ cd ../ownership_exercise_solved/
 cargo build --verbose
 cd ../../Enums_and_Pattern_Matching/exercise_loesung/
 cargo build --verbose
-cd ../nslookup/
+cd ../../nslookup/
 cargo build --verbose
 cargo test
 cargo doc
