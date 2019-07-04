@@ -46,7 +46,7 @@ impl Response {
         if response_start_index >= buf.len() {
             return Err(CustomError::EmptyResponse);
         }
-        check_response_status(&to_binary_vec(&buf[2..4])?)?;
+        check_response_status(buf[2], buf[3])?;
         let domain_index_raw = combine_u8tou16(buf[response_start_index], buf[response_start_index + 1]);
 
         Ok(Response::new(get_domain_r(&buf, get_name_index(domain_index_raw)), get_ip_r(&buf, response_start_index)?))
@@ -74,18 +74,39 @@ impl Ip {
 /// Checks a) if the given DNS-Package is acutally a response
 /// and b) if errors occured.
 ///
-/// The first bit must be 1 for a response
-/// The last four bits must be 0 for no errors.
+///         flag1                    flag2
+/// 7  6  5  4  3  2  1     0  7  6  5  4  3  2  1  0
+///+--+--+--+--+--+--+--+  +--+--+--+--+--+--+--+--+--+
+///|QR|   Opcode  |AA|TC|  |RD|RA|   Z    |   RCODE   |
+///
+/// QR specifies wether this is a message(0) or response(1). We only want responses.
+/// RCODE contains errors and all must be zero.
 ///
 /// # Arguments
 ///
-/// * `bits` - The status bits in an array
-fn check_response_status(bits: &[u8]) -> Result<(), CustomError> {
-    if bits.len() < 16 || bits[0] == 0 || bits[12] == 1 || bits[13] == 1 || bits[14] == 1 || bits[15] == 1 {
+/// * `flags1` - Contains the flags
+/// * `flags2` - Contains the flags
+fn check_response_status(flags1: u8, flags2: u8) -> Result<(), CustomError> {
+    if !bit_at(flags1, 7) || bit_at(flags2, 3) || bit_at(flags2, 2) ||
+        bit_at(flags2, 1) || bit_at(flags2, 0) {
         Err(CustomError::ResponseError)
     }
     else {
         Ok(())
+    }
+}
+
+/// Returns the value of a single bit in an u8
+///
+/// # Arguments
+///
+/// * `input` - The given u8
+/// * `n` - The offset
+fn bit_at(input: u8, n: u8) -> bool {
+    if n < 8 {
+        input & (1 << n) != 0
+    } else {
+        false
     }
 }
 
@@ -230,36 +251,8 @@ fn combine_u8tou16(val1: u8, val2: u8) -> u16 {
     (u16::from(val1) << 8) | u16::from(val2)
 }
 
-
-fn to_binary_vec(buf: &[u8]) -> Result<Vec<u8>, CustomError> {
-    let bytes = encode(&buf)?;
-    let mut s =  String::with_capacity(bytes.len() * 4);
-
-    for i in bytes.chars() {
-        match i {
-            '0' => write!(&mut s, "0000"),
-            '1' => write!(&mut s, "0001"),
-            '2' => write!(&mut s, "0010"),
-            '3' => write!(&mut s, "0011"),
-            '4' => write!(&mut s, "0100"),
-            '5' => write!(&mut s, "0101"),
-            '6' => write!(&mut s, "0110"),
-            '7' => write!(&mut s, "0111"),
-            '8' => write!(&mut s, "1000"),
-            '9' => write!(&mut s, "1001"),
-            'a' | 'A' => write!(&mut s, "1010"),
-            'b' | 'B' => write!(&mut s, "1011"),
-            'c' | 'C' => write!(&mut s, "1100"),
-            'd' | 'D' => write!(&mut s, "1101"),
-            'e' | 'E' => write!(&mut s, "1110"),
-            'f' | 'F' => write!(&mut s, "1111"),
-            _ => return Err(CustomError::FaultyHexError),
-        }?
-    }
-    Ok(s.chars().map(|a| a as u8).collect::<Vec<u8>>())
-}
-
 /// Returns hex of a u8
+///
 /// # Arguments
 /// * `bytes` - bytes that we want to parse
 fn encode(bytes: &[u8]) -> Result<String, CustomError> {

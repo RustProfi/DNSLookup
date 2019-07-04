@@ -6,7 +6,6 @@ pub enum CustomError {
     FmtError(std::fmt::Error),
     IoError(std::io::Error),
     ResponseError,
-    FaultyHexError,
     QtypeNotSupported(usize),
     EmptyResponse,
 }
@@ -19,7 +18,6 @@ impl fmt::Display for CustomError {
             CustomError::IoError(ref e) => write!(f, "{}", e),
             CustomError::Overflow => write!(f, "More than usize:Max nonmatching elements"),
             CustomError::ResponseError => write!(f, "Response ist fehlerbehaftet."),
-            CustomError::FaultyHexError => write!(f, "Given value was not hex."),
             CustomError::QtypeNotSupported(ref x) => write!(f, "Qtype {} is not supported", x),
             CustomError::EmptyResponse => write!(f, "Response is faulty"),
         }
@@ -34,7 +32,6 @@ impl fmt::Debug for CustomError {
             CustomError::IoError(ref e) => write!(f, "{}", e),
             CustomError::Overflow => write!(f, "More than usize:Max nonmatching elements"),
             CustomError::ResponseError => write!(f, "Response ist fehlerbehaftet."),
-            CustomError::FaultyHexError => write!(f, "Given value was not hex."),
             CustomError::QtypeNotSupported(ref x) => write!(f, "Qtype {} is not supported", x),
             CustomError::EmptyResponse => write!(f, "Response is faulty"),
         }
