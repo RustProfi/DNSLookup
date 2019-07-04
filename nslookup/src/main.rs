@@ -20,16 +20,23 @@ fn main() {
         if check_ip(&args[1]) {
             println!("Reverse lookup not supported");
         } else {
-            let header = match Header::new_message(2, false, false) {
-                Ok(x) => x,
+            let header = Header::new(2, false, false);
+            let message = match Question::new(header, &args[1], Qtype::A).get_question() {
+                Ok(val) => val,
                 Err(e) => {
-                    println!("{}", e.to_string());
+                    println!("{}", e);
                     exit(1)
                 }
             };
-            let message = Question::new_question(header.clone(), &args[1], Qtype::A);
             sock_send(message);
-            let message = Question::new_question(header, &args[1], Qtype::AAAA);
+            let header = Header::new(2, false, false);
+            let message = match Question::new(header, &args[1], Qtype::AAAA).get_question() {
+                Ok(val) => val,
+                Err(e) => {
+                    println!("{}", e);
+                    exit(1)
+                }
+            };
             sock_send(message)
         }
     } else {

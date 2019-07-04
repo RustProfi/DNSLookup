@@ -16,10 +16,10 @@ fn test_qtype() {
 
 #[test]
 fn test_question() {
-    let header = Header::new_message(1,false, false);
+    let header = Header::get_message(1, false, false);
     assert_eq!(header.unwrap(),b"\x00\x01\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00");
-    let header2 = Header::new_message(2,false, false);
-    assert_eq!(Question::new_question(header2.unwrap(),"example.com", Qtype::A), b"\x00\x02\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x07\x65\x78\x61\x6d\x70\x6c\x65\x03\x63\x6f\x6d\x00\x00\x01\x00\x01")
+    let header2 = Header::get_message(2, false, false);
+    assert_eq!(Question::get_question(header2.unwrap(), "example.com", Qtype::A), b"\x00\x02\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x07\x65\x78\x61\x6d\x70\x6c\x65\x03\x63\x6f\x6d\x00\x00\x01\x00\x01")
 }
 
 #[test]

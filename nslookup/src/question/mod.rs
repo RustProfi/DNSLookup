@@ -12,42 +12,11 @@ pub struct Header {
     pub opcode: bool,
 }
 
-/// A DNS Question is represented here
-pub struct Question {
-    pub header: Vec<u8>,
-    pub url: String,
-    pub qtype: Qtype,
-}
-
-impl Question {
-    /// Returns a u8 Vec made up of header and question
-    ///
-    /// # Arguments
-    ///
-    /// * `header` - u8 Vec of specified header
-    /// * `url` - url
-    /// * `qtype` - qtype (A or AAAA)
-    pub fn new_question(header: Vec<u8>, url: &str, qtype: Qtype) -> Vec<u8> {
-        let mut vec = Vec::new();
-        let rest = vec![0,0,qtype.value(),0,1];
-        vec.extend(header);
-        if !url.is_empty() {
-            for x in url.split('.').collect::<Vec<&str>>() {
-                let url_bytes: Vec<_> = x.bytes().collect();
-                let len = url_bytes.len().to_be_bytes().to_vec().into_iter().filter(|&i| i != 0).collect::<Vec<_>>();
-                vec.extend(len);
-                vec.extend(url_bytes);
-            }
-            vec.extend(rest);
-            vec
-        } else {
-            vec.extend(rest);
-            vec
-        }
-    }
-}
-
 impl Header {
+    pub fn new(id: u16, qr: bool, opcode: bool) -> Self {
+        Header {id, qr, opcode}
+    }
+
     /// Returns the header as u8 Vector
    ///
    /// # Arguments
@@ -55,12 +24,54 @@ impl Header {
    /// * `id` - arbitrary 16 bit identifier
    /// * `qr` - specify if query or response
    /// * `opcode` - qtype (A or AAAA) query type (standard/inverse)
-    pub fn new_message(id: u16, qr: bool, opcode: bool) -> Result<Vec<u8>,CustomError> {
-        let queryparams = format!("{}000{}00100000000", qr as i32, opcode as i32);
-        let m = format!("{:0>4x}{}0001000000000000",id, binary_to_hex(&queryparams)?);
+    pub fn get_message(&self) -> Result<Vec<u8>, CustomError> {
+        let queryparams = format!("{}000{}00100000000", self.qr as i32, self.opcode as i32);
+        let m = format!("{:0>4x}{}0001000000000000", self.id, binary_to_hex(&queryparams)?);
         Ok(decode(&m)?)
     }
 }
+
+
+/// A DNS Question is represented here
+pub struct Question {
+    pub header: Header,
+    pub url: String,
+    pub qtype: Qtype,
+}
+
+impl Question {
+    /// Returns a new Question
+    ///
+    /// # Arguments
+    ///
+    /// * `header` - u8 Vec of specified header
+    /// * `url` - url
+    /// * `qtype` - qtype (A or AAAA)
+    pub fn new(header: Header, url: &str, qtype: Qtype) -> Self {
+        Question{ header, url: String::from(url), qtype}
+    }
+
+    /// Returns an u8 Vec made up of header and question
+    pub fn get_question(self) -> Result<Vec<u8>, CustomError> {
+        let mut vec = self.header.get_message()?;
+        let rest = vec![0, 0, self.qtype.value(),0,1];
+        if !self.url.is_empty() {
+            for x in self.url.split('.').collect::<Vec<&str>>() {
+                let url_bytes: Vec<_> = x.bytes().collect();
+                let len = url_bytes.len().to_be_bytes().to_vec().into_iter().filter(|&i| i != 0).collect::<Vec<_>>();
+                vec.extend(len);
+                vec.extend(url_bytes);
+            }
+            vec.extend(rest);
+            Ok(vec)
+        } else {
+            vec.extend(rest);
+            Ok(vec)
+        }
+    }
+}
+
+
 
 /// returns binary as hex representation
 /// # Arguments
