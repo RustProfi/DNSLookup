@@ -1,3 +1,4 @@
+extern crate nslookup;
 use std::env;
 use std::str;
 use std::vec::Vec;
@@ -44,11 +45,7 @@ fn main() {
 /// # Arguments
 /// * `bytes` - bytes that we want to parse
 fn check_ip(ip: &str) -> bool {
-    if ip.split('.').count() == 4 {
-        ip.split('.').all(|s| s.parse::<i32>().is_ok())
-    } else {
-        false
-    }
+    ip.split('.').map(|s| s.parse::<i32>().is_ok()).count() == 4
 }
 
 /// Creates a DNS-Package which contains a Header and a Question.
