@@ -8,7 +8,7 @@ pub enum CustomError {
     ResponseError,
     QtypeNotSupported(usize),
     EmptyResponse,
-    IpParseError
+    IpParseError,
 }
 
 impl fmt::Display for CustomError {
@@ -17,7 +17,9 @@ impl fmt::Display for CustomError {
             CustomError::ParseIntError(ref e) => write!(f, "{}", e),
             CustomError::FmtError(ref e) => write!(f, "{}", e),
             CustomError::IoError(ref e) => write!(f, "{}", e),
-            CustomError::Overflow => write!(f, "Ip would overflow. Something with the response is wrong"),
+            CustomError::Overflow => {
+                write!(f, "Ip would overflow. Something with the response is wrong")
+            }
             CustomError::ResponseError => write!(f, "Response ist faulty."),
             CustomError::QtypeNotSupported(ref x) => write!(f, "Qtype {} is not supported", x),
             CustomError::EmptyResponse => write!(f, "Response is empty"),
@@ -32,7 +34,9 @@ impl fmt::Debug for CustomError {
             CustomError::ParseIntError(ref e) => write!(f, "{}", e),
             CustomError::FmtError(ref e) => write!(f, "{}", e),
             CustomError::IoError(ref e) => write!(f, "{}", e),
-            CustomError::Overflow => write!(f, "Ip would overflow. Something with the response is wrong"),
+            CustomError::Overflow => {
+                write!(f, "Ip would overflow. Something with the response is wrong")
+            }
             CustomError::ResponseError => write!(f, "Response ist faulty."),
             CustomError::QtypeNotSupported(ref x) => write!(f, "Qtype {} is not supported", x),
             CustomError::EmptyResponse => write!(f, "Response is empty"),

@@ -9,7 +9,7 @@ pub enum Qtype {
     /// IPv6
     AAAA,
     /// canonical name record
-    CNAME
+    CNAME,
 }
 
 impl fmt::Display for Qtype {
@@ -50,7 +50,7 @@ impl Qtype {
             1 => Ok(Qtype::A),
             28 => Ok(Qtype::AAAA),
             5 => Ok(Qtype::CNAME),
-            _ => Err(CustomError::QtypeNotSupported(value))
+            _ => Err(CustomError::QtypeNotSupported(value)),
         }
     }
 }

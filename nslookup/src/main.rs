@@ -4,15 +4,14 @@ use std::str;
 use std::vec::Vec;
 
 mod customerror;
-mod response;
-mod question;
 mod qtype;
-use std::process::exit;
+mod question;
+mod response;
 use crate::qtype::Qtype;
-use std::net::UdpSocket;
+use crate::question::{DnsMessageBuilder, Header, Question};
 use crate::response::Response;
-use crate::question::{Header, Question, DnsMessageBuilder};
-
+use std::net::UdpSocket;
+use std::process::exit;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -36,9 +35,7 @@ fn main() {
         }
     } else {
         println!("Usage is: nslookup [Host Name] | -help");
-        //println!("Usage is: nslookup [Host Name] | [Host IP] | -help");
         println!("nslookup foo.bar.com (Returns IP Address for Host Name)");
-        //println!("nslookup 123.123.123.123 (Returns Host Name for Address)");
         println!("nslookup -help (Returns this Help Message)");
     }
 }
@@ -60,15 +57,14 @@ pub fn sock_send(messages: Vec<Vec<u8>>) {
     for message in messages {
         let sock = match UdpSocket::bind("0.0.0.0:0") {
             Ok(s) => s,
-            Err(e) =>
-                {
-                    println!("{}", e.to_string());
-                    exit(1)
-                }
+            Err(e) => {
+                println!("{}", e.to_string());
+                exit(1)
+            }
         };
-        let mut buf = [0u8;4096];
-        match sock.send_to(&message[..],"1.1.1.1:53") {
-            Ok(_) => {},
+        let mut buf = [0u8; 4096];
+        match sock.send_to(&message[..], "1.1.1.1:53") {
+            Ok(_) => {}
             Err(e) => {
                 println!("{}", e.to_string());
                 exit(1)
@@ -82,12 +78,11 @@ pub fn sock_send(messages: Vec<Vec<u8>>) {
             }
         };
         match Response::parse_response(&buf[0..amt], message[..].len()) {
-            Ok(response) => println!("{}",response.to_string()),
-            Err(e) => println!("{}", e.to_string())
+            Ok(response) => println!("{}", response.to_string()),
+            Err(e) => println!("{}", e.to_string()),
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {
