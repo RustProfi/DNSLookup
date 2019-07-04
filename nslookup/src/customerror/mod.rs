@@ -8,6 +8,7 @@ pub enum CustomError {
     ResponseError,
     QtypeNotSupported(usize),
     EmptyResponse,
+    IpParseError
 }
 
 impl fmt::Display for CustomError {
@@ -16,10 +17,11 @@ impl fmt::Display for CustomError {
             CustomError::ParseIntError(ref e) => write!(f, "{}", e),
             CustomError::FmtError(ref e) => write!(f, "{}", e),
             CustomError::IoError(ref e) => write!(f, "{}", e),
-            CustomError::Overflow => write!(f, "More than usize: Max nonmatching elements"),
-            CustomError::ResponseError => write!(f, "Response ist fehlerbehaftet."),
+            CustomError::Overflow => write!(f, "Ip would overflow. Something with the response is wrong"),
+            CustomError::ResponseError => write!(f, "Response ist faulty."),
             CustomError::QtypeNotSupported(ref x) => write!(f, "Qtype {} is not supported", x),
-            CustomError::EmptyResponse => write!(f, "Response is faulty"),
+            CustomError::EmptyResponse => write!(f, "Response is empty"),
+            CustomError::IpParseError => write!(f, "Invalid Ip Adress"),
         }
     }
 }
@@ -30,10 +32,11 @@ impl fmt::Debug for CustomError {
             CustomError::ParseIntError(ref e) => write!(f, "{}", e),
             CustomError::FmtError(ref e) => write!(f, "{}", e),
             CustomError::IoError(ref e) => write!(f, "{}", e),
-            CustomError::Overflow => write!(f, "More than usize:Max nonmatching elements"),
-            CustomError::ResponseError => write!(f, "Response ist fehlerbehaftet."),
+            CustomError::Overflow => write!(f, "Ip would overflow. Something with the response is wrong"),
+            CustomError::ResponseError => write!(f, "Response ist faulty."),
             CustomError::QtypeNotSupported(ref x) => write!(f, "Qtype {} is not supported", x),
-            CustomError::EmptyResponse => write!(f, "Response is faulty"),
+            CustomError::EmptyResponse => write!(f, "Response is empty"),
+            CustomError::IpParseError => write!(f, "Invalid Ip Adress"),
         }
     }
 }

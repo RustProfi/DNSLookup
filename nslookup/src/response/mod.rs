@@ -1,8 +1,8 @@
-use std::fmt::Write;
 use std::fmt;
 use std::vec::Vec;
 use crate::customerror::CustomError;
 use crate::qtype::Qtype;
+use std::net::IpAddr;
 
 /// A struct that holds the Response
 #[derive(PartialEq)]
@@ -58,7 +58,7 @@ impl Response {
     /// * `response_start_index` - The index where the actual respons(es) starts
     pub fn parse_response(buf: &[u8], response_start_index: usize)-> Result<Self, CustomError> {
         if response_start_index >= buf.len() {
-            return Err(CustomError::EmptyResponse);
+            return Err(CustomError::EmptyResponse)
         }
         check_response_status(buf[2], buf[3])?;
         let domain_index_raw = combine_u8tou16(buf[response_start_index], buf[response_start_index + 1]);
@@ -148,7 +148,7 @@ fn get_domain_r(response: &[u8], index: usize) ->  Result<String, CustomError> {
     let next = startindex + length;
 
     if next < response.len() {
-        let domain_build = (startindex..startindex+length).map(|a|response[a] as char).collect::<String>();
+        let domain_build = (startindex..next).map(|a|response[a] as char).collect::<String>();
 
         if response[next] == 0 {
             Ok(domain_build)
@@ -187,18 +187,15 @@ fn get_ip_r(response: &[u8], answer_start_index: usize) -> Result<Vec<Ip>, Custo
     let ip_start_index = answer_start_index + 12;
 
     match qtype {
-        Qtype::A => {
-            let mut ip = (ip_start_index..ip_start_index + ip_length).map(|a|format!("{}.", response[a])).collect::<String>();
-            ip.pop();
-            result.push( Ip::new(ip, qtype))
-        },
-        Qtype::AAAA => {
-            let encoded = encode(&response[ip_start_index..ip_start_index + ip_length])?.chars().collect::<Vec<char>>();
-            result.push( Ip::new(format_ipv6(&encoded), qtype))
+        Qtype::A | Qtype::AAAA => {
+            println!("{:?}", &response[ip_start_index..ip_start_index + ip_length]);
+            result.push( Ip::new(format_ip(&response[ip_start_index..ip_start_index + ip_length])?, qtype))
         },
         Qtype::CNAME => {
-            let ip = (ip_start_index..ip_start_index+ip_length).map(|a|response[a] as char).collect::<String>();
-            result.push(Ip::new(ip, qtype))
+            if let Ok(cname) =  get_domain_r(&response[ip_start_index..ip_start_index + ip_length], 0) {
+                result.push(Ip::new(cname, qtype))
+            }
+
         }
     }
 
@@ -212,45 +209,28 @@ fn get_ip_r(response: &[u8], answer_start_index: usize) -> Result<Vec<Ip>, Custo
     }
 }
 
-
 /// Formats an array of chars into an ipv6 format by RFC 5952 convention.
 ///
 /// # Arguments
 ///
-/// * `chars` - An array of chars with the hex numbers.
-fn format_ipv6(chars: &[char]) -> String {
-    let mut res = String::new();
-    let mut doubleset = false;
-    let mut doubleoff = false;
-
-    for (i, chunk) in chars.chunks(4).enumerate() {
-        match chunk.iter().position(|&x| x != '0') {
-            Some(v) => {
-                res.push_str(&chunk[v..].iter().collect::<String>());
-                res.push_str(":");
-                if doubleset {
-                    doubleoff = true;
-                }
-            },
-            None => {
-                if !doubleset {
-                    if i == 0 {
-                        res.push_str("::");
-                    }
-                    else {
-                        res.push_str(":");
-                    }
-                    doubleset = true
-                }
-                else if doubleoff {
-                    res.push_str("0:")
-                }
-            }
-        }
+/// * `buf` - An array of chars with the hex numbers 16 bytes long.
+fn format_ip(buf: &[u8]) -> Result<String, CustomError> {
+    if buf.len() == 4 {
+        let mut array = [0; 4];
+        array.copy_from_slice(buf);
+        Ok(IpAddr::from(array).to_string())
     }
-    res.pop();
-    res
+    else if buf.len() == 16 {
+        let mut array = [0; 16];
+        array.copy_from_slice(buf);
+        Ok(IpAddr::from(array).to_string())
+    }
+    else {
+        Err(CustomError::IpParseError)
+    }
 }
+
+
 
 /// The response uses a compressed format for the domain name.
 /// It's actually just a pointer into the question section.
@@ -276,18 +256,6 @@ fn get_name_index(pointer: u16) -> usize {
 /// * `val2` - The second value.
 fn combine_u8tou16(val1: u8, val2: u8) -> u16 {
     (u16::from(val1) << 8) | u16::from(val2)
-}
-
-/// Returns hex of a u8
-///
-/// # Arguments
-/// * `bytes` - bytes that we want to parse
-fn encode(bytes: &[u8]) -> Result<String, CustomError> {
-    let mut s = String::with_capacity(bytes.len() * 2);
-    for &b in bytes {
-        write!(&mut s, "{:02x}", b)?;
-    }
-    Ok(s)
 }
 
 #[cfg(test)]
@@ -328,12 +296,8 @@ mod tests {
 
     #[test]
     fn test_format_ipv6() {
-        let vec1 = "20010000000000000001000000000001".chars().collect::<Vec<char>>();
-        let vec2 = "2a0014504001081c000000000000200e".chars().collect::<Vec<char>>();
-        let vec3 = "00000000000000000000ffff40bc3892".chars().collect::<Vec<char>>();
-        assert_eq!(format_ipv6(&vec1), String::from("2001::1:0:0:1"));
-        assert_eq!(format_ipv6(&vec2), String::from("2a00:1450:4001:81c::200e"));
-        assert_eq!(format_ipv6(&vec3), String::from("::ffff:40bc:3892"));
+        let vec: Vec<u8> = vec![42, 0, 20, 80, 64, 12, 12, 0, 0, 0, 0, 0, 0, 0, 0, 139];
+        assert_eq!(format_ip(&vec).unwrap(), String::from("2a00:1450:400c:c00::8b"));
     }
 
     #[test]
@@ -344,11 +308,5 @@ mod tests {
     #[test]
     fn test_combine_u8tou16() {
         assert_eq!(combine_u8tou16(181, 180), 46516)
-    }
-
-    #[test]
-    fn test_encode() {
-        let response: Vec<u8> = vec![0, 2, 129, 128, 0, 1, 250];
-        assert_eq!(encode(&response).unwrap(), String::from("000281800001fa"));
     }
 }
