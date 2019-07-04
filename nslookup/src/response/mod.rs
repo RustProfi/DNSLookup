@@ -5,12 +5,26 @@ use crate::customerror::CustomError;
 use crate::qtype::Qtype;
 
 /// A struct that holds the Response
+#[derive(PartialEq)]
 pub struct Response {
     pub domain: String,
     pub ip: Vec<Ip>
 }
 
 impl fmt::Display for Response {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        let mut res_str = String::new();
+        for ip in &self.ip {
+            res_str.push_str(&ip.qtype.to_string());
+            res_str.push_str(": ");
+            res_str.push_str(&ip.ip);
+            res_str.push_str("\n");
+        }
+        write!(f, "Domain: {}\nAdress(es):\n{}", self.domain, res_str)
+    }
+}
+
+impl fmt::Debug for Response {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         let mut res_str = String::new();
         for ip in &self.ip {
@@ -30,7 +44,7 @@ impl Response {
     ///
     /// * `domain` - The domain
     /// * `ip` - A Vector of IP Structs
-    fn new(domain: String, ip: Vec<Ip>) -> Self {
+    pub fn new(domain: String, ip: Vec<Ip>) -> Self {
         Response{domain, ip}
     }
 
@@ -68,7 +82,7 @@ impl Ip {
     ///
     /// * `ip` - The adress
     /// * `qtype` - The query Type
-    fn new(ip: String, qtype: Qtype) -> Self {
+    pub fn new(ip: String, qtype: Qtype) -> Self {
         Ip{ip, qtype}
     }
 }
