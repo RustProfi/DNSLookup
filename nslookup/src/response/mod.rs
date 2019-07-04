@@ -188,6 +188,7 @@ fn get_ip_r(response: &[u8], answer_start_index: usize) -> Result<Vec<Ip>, Custo
 
     match qtype {
         Qtype::A | Qtype::AAAA => {
+            println!("{:?}", &response[ip_start_index..ip_start_index + ip_length]);
             result.push( Ip::new(format_ip(&response[ip_start_index..ip_start_index + ip_length])?, qtype))
         },
         Qtype::CNAME => {
@@ -295,12 +296,8 @@ mod tests {
 
     #[test]
     fn test_format_ipv6() {
-        let vec1 = "20010000000000000001000000000001".chars().collect::<Vec<char>>();
-        let vec2 = "2a0014504001081c000000000000200e".chars().collect::<Vec<char>>();
-        let vec3 = "00000000000000000000ffff40bc3892".chars().collect::<Vec<char>>();
-        assert_eq!(format_ipv6(&vec1), String::from("2001::1:0:0:1"));
-        assert_eq!(format_ipv6(&vec2), String::from("2a00:1450:4001:81c::200e"));
-        assert_eq!(format_ipv6(&vec3), String::from("::ffff:40bc:3892"));
+        let vec: Vec<u8> = vec![42, 0, 20, 80, 64, 12, 12, 0, 0, 0, 0, 0, 0, 0, 0, 139];
+        assert_eq!(format_ip(&vec).unwrap(), String::from("2a00:1450:400c:c00::8b"));
     }
 
     #[test]
@@ -311,11 +308,5 @@ mod tests {
     #[test]
     fn test_combine_u8tou16() {
         assert_eq!(combine_u8tou16(181, 180), 46516)
-    }
-
-    #[test]
-    fn test_encode() {
-        let response: Vec<u8> = vec![0, 2, 129, 128, 0, 1, 250];
-        assert_eq!(encode(&response).unwrap(), String::from("000281800001fa"));
     }
 }
