@@ -29,21 +29,18 @@ impl Question {
     /// * `qtype` - qtype (A or AAAA)
     pub fn new_question(header: Vec<u8>, url: &str, qtype: Qtype) -> Vec<u8> {
         let mut vec = Vec::new();
+        let rest = vec![0,0,qtype.value(),0,1];
         vec.extend(header);
         if !url.is_empty() {
             for x in url.split('.').collect::<Vec<&str>>() {
                 let url_bytes: Vec<_> = x.bytes().collect();
-                let len = url_bytes.len().to_be_bytes().to_vec();
-                let mut question: Vec<_> = len.into_iter().filter(|&i| i != 0).collect();
-                question.extend(url_bytes);
-                vec.extend(question)
-
+                let len = url_bytes.len().to_be_bytes().to_vec().into_iter().filter(|&i| i != 0).collect::<Vec<_>>();
+                vec.extend(len);
+                vec.extend(url_bytes);
             }
-            let rest = vec![0,0,qtype.value(),0,1];
             vec.extend(rest);
             vec
         } else {
-            let rest = vec![0,0,qtype.value(),0,1];
             vec.extend(rest);
             vec
         }
@@ -60,7 +57,7 @@ impl Header {
    /// * `opcode` - qtype (A or AAAA) query type (standard/inverse)
     pub fn new_message(id: u16, qr: bool, opcode: bool) -> Result<Vec<u8>,CustomError> {
         let queryparams = format!("{}000{}00100000000", qr as i32, opcode as i32);
-        let m = format!("{:0>4x}{}0001000000000000",id, binary_to_hex(queryparams)?);
+        let m = format!("{:0>4x}{}0001000000000000",id, binary_to_hex(&queryparams)?);
         Ok(decode(&m)?)
     }
 }
@@ -68,11 +65,9 @@ impl Header {
 /// returns binary as hex representation
 /// # Arguments
 /// * `binary` 16 bit binary
-fn binary_to_hex(binary: String) -> Result<String, CustomError> {
+fn binary_to_hex(binary: &str) -> Result<String, CustomError> {
     let mut s = String::with_capacity(4);
-    let i = binary.chars().collect::<Vec<char>>();
-    let slice = i.chunks_exact(4);
-    for x in slice {
+    for x in binary.chars().collect::<Vec<char>>().chunks_exact(4) {
         write!(&mut s, "{:x}", recursive_find(0, &x)?)?;
     }
     Ok(s)
@@ -138,6 +133,6 @@ mod tests {
     #[test]
     fn test_binary_to_hex() {
         let bin = "0000100100000000";
-        assert_eq!(binary_to_hex(bin.to_string()).unwrap(), "0900");
+        assert_eq!(binary_to_hex(bin).unwrap(), "0900");
     }
 }
