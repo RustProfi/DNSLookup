@@ -203,16 +203,10 @@ fn get_ip_r(response: &[u8], answer_start_index: usize) -> Result<Vec<Ip>, Custo
     let ip_start_index = answer_start_index + 12;
 
     match qtype {
-        Qtype::A | Qtype::AAAA => {
-            println!(
-                "{:?}",
-                &response[ip_start_index..ip_start_index + ip_length]
-            );
-            result.push(Ip::new(
-                format_ip(&response[ip_start_index..ip_start_index + ip_length])?,
-                qtype,
-            ))
-        }
+        Qtype::A | Qtype::AAAA => result.push(Ip::new(
+            format_ip(&response[ip_start_index..ip_start_index + ip_length])?,
+            qtype,
+        )),
         Qtype::CNAME => {
             if let Ok(cname) =
                 get_domain_r(&response[ip_start_index..ip_start_index + ip_length], 0)
