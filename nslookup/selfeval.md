@@ -24,6 +24,8 @@ We made use of bitwise shift operations which happen on the stack for more perfo
 
 We used PartialEq and Debug Macros.
 
+We used rust fmt.
+
 ## Bad
 We didn't reach our goal to implement interactive mode and reverse lookup. Interactive mode was left behind because of 
 time constrains and it would have gone beyond the scope. The reason why reverse lookup was removed is because we used the Inverse querie method that has been deprecated since 2002.
