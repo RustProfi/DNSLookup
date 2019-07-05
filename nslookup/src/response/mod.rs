@@ -225,11 +225,11 @@ fn get_ip_r(response: &[u8], answer_start_index: usize) -> Result<Vec<Ip>, Custo
     }
 }
 
-/// Formats an array of chars into an ipv6 format by RFC 5952 convention.
+/// Formats bytes to ip representation.
 ///
 /// # Arguments
 ///
-/// * `buf` - An array of chars with the hex numbers 16 bytes long.
+/// * `buf` - An byte array containing an ip in bytes sized 4 or 16.
 fn format_ip(buf: &[u8]) -> Result<String, CustomError> {
     if buf.len() == 4 {
         let mut array = [0; 4];

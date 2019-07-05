@@ -10,6 +10,7 @@ mod response;
 use crate::qtype::Qtype;
 use crate::question::{DnsMessageBuilder, Header, Question};
 use crate::response::Response;
+use customerror::CustomError;
 use std::net::UdpSocket;
 use std::process::exit;
 
@@ -31,7 +32,14 @@ fn main() {
                     exit(1)
                 }
             };
-            sock_send(pack)
+
+            match send_and_parse(pack) {
+                Ok(_) => exit(0),
+                Err(e) => {
+                    println!("{}", e.to_string());
+                    exit(1)
+                }
+            }
         }
     } else {
         println!("Usage is: nslookup [Host Name] | -help");
@@ -53,35 +61,18 @@ fn check_ip(ip: &str) -> bool {
 /// The response contains the same Header + Question and in addition one or more concatenated Answers.
 /// # Arguments
 /// * `message` - u8 vector, containing Header and Question
-pub fn sock_send(messages: Vec<Vec<u8>>) {
+pub fn send_and_parse(messages: Vec<Vec<u8>>) -> Result<(()), CustomError> {
     for message in messages {
-        let sock = match UdpSocket::bind("0.0.0.0:0") {
-            Ok(s) => s,
-            Err(e) => {
-                println!("{}", e.to_string());
-                exit(1)
-            }
-        };
+        let sock = UdpSocket::bind("0.0.0.0:0")?;
         let mut buf = [0u8; 4096];
-        match sock.send_to(&message[..], "1.1.1.1:53") {
-            Ok(_) => {}
-            Err(e) => {
-                println!("{}", e.to_string());
-                exit(1)
-            }
-        }
-        let amt = match sock.recv(&mut buf) {
-            Ok(s) => s,
-            Err(e) => {
-                println!("{}", e.to_string());
-                exit(1)
-            }
-        };
-        match Response::parse_response(&buf[0..amt], message[..].len()) {
-            Ok(response) => println!("{}", response.to_string()),
-            Err(e) => println!("{}", e.to_string()),
-        }
+
+        sock.send_to(&message[..], "1.1.1.1:53")?;
+        let amt = sock.recv(&mut buf)?;
+
+        let response = Response::parse_response(&buf[0..amt], message[..].len())?;
+        println!("{}", response);
     }
+    Ok(())
 }
 
 #[cfg(test)]
