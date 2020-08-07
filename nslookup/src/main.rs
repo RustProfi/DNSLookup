@@ -66,7 +66,7 @@ pub fn send_and_parse(messages: Vec<Vec<u8>>) -> Result<(()), CustomError> {
         let sock = UdpSocket::bind("0.0.0.0:0")?;
         let mut buf = [0u8; 4096];
 
-        sock.send_to(&message[..], "1.1.1.1:53")?;
+        sock.send_to(&message[..], "8.8.8.8:53")?;
         let amt = sock.recv(&mut buf)?;
 
         let response = Response::parse_response(&buf[0..amt], message[..].len())?;
